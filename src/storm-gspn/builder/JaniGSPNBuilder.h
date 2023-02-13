@@ -7,6 +7,7 @@
 
 namespace storm {
 namespace builder {
+
 class JaniGSPNBuilder {
    public:
     JaniGSPNBuilder(storm::gspn::GSPN const& gspn) : gspn(gspn), expressionManager(gspn.getExpressionManager()) {}
@@ -39,10 +40,12 @@ class JaniGSPNBuilder {
 
    private:
     void addVariables(storm::jani::Model* model);
+    void addActions(storm::jani::Model* model);
 
     uint64_t addLocation(storm::jani::Automaton& automaton);
 
     void addEdges(storm::jani::Automaton& automaton, uint64_t locId);
+    void addEdgesSingle(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId);
 
     storm::jani::Variable const& addDeadlockTransientVariable(storm::jani::Model* model, std::string name, bool ignoreCapacities = false,
                                                               bool ignoreInhibitorArcs = false, bool ignoreEmptyPlaces = false);

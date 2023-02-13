@@ -114,11 +114,25 @@ class Transition {
     void setName(std::string const& name);
 
     /*!
+     * Set the tag of the transition.
+     *
+     * @param tag New tag of the transition.
+     */
+    void setTag(std::string const& tag);
+
+    /*!
      * Returns the name of the transition.
      *
      * @return The name of the transition.
      */
     std::string const& getName() const;
+
+    /*!
+     * Returns the tag of the transition.
+     *
+     * @return The tag of the transition.
+     */
+    std::string const& getTag() const;
 
     std::unordered_map<uint64_t, uint64_t> const& getInputPlaces() const;
 
@@ -184,6 +198,9 @@ class Transition {
 
     // name of the transition
     std::string name;
+
+    // tag of the transition
+    std::string tag;
 
     // priority of this transition
     uint64_t priority = 0;

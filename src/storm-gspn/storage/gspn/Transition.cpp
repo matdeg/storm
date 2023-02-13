@@ -100,8 +100,16 @@ void Transition::setName(std::string const& name) {
     this->name = name;
 }
 
+void Transition::setTag(std::string const& tag) {
+    this->tag = tag;
+}
+
 std::string const& Transition::getName() const {
     return this->name;
+}
+
+std::string const& Transition::getTag() const {
+    return this->tag;
 }
 
 std::unordered_map<uint64_t, uint64_t> const& Transition::getInputPlaces() const {

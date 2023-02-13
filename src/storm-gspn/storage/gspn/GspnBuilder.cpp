@@ -31,12 +31,13 @@ void GspnBuilder::setTransitionLayoutInfo(uint64_t transitionId, LayoutInfo cons
     transitionLayout[transitionId] = layoutInfo;
 }
 
-uint_fast64_t GspnBuilder::addImmediateTransition(uint_fast64_t const& priority, double const& weight, std::string const& name) {
+uint_fast64_t GspnBuilder::addImmediateTransition(uint_fast64_t const& priority, double const& weight, std::string const& name, std::string const& tag) {
     auto trans = storm::gspn::ImmediateTransition<double>();
     auto newId = GSPN::immediateTransitionIdToTransitionId(immediateTransitions.size());
     trans.setName(name);
     trans.setPriority(priority);
     trans.setID(newId);
+    trans.setTag(tag);
 
     // ensure that the first partition is for the 'general/weighted' transitions
     if (partitions.count(priority) == 0) {
@@ -61,17 +62,18 @@ uint_fast64_t GspnBuilder::addImmediateTransition(uint_fast64_t const& priority,
     return newId;
 }
 
-uint_fast64_t GspnBuilder::addTimedTransition(uint_fast64_t const& priority, double const& rate, std::string const& name) {
-    return addTimedTransition(priority, rate, 1, name);
+uint_fast64_t GspnBuilder::addTimedTransition(uint_fast64_t const& priority, double const& rate, std::string const& name, std::string const& tag) {
+    return addTimedTransition(priority, rate, 1, name, tag);
 }
 
 uint_fast64_t GspnBuilder::addTimedTransition(uint_fast64_t const& priority, double const& rate, boost::optional<uint64_t> const& numServers,
-                                              std::string const& name) {
+                                              std::string const& name, std::string const& tag) {
     auto trans = storm::gspn::TimedTransition<double>();
     auto newId = GSPN::timedTransitionIdToTransitionId(timedTransitions.size());
     trans.setName(name);
     trans.setPriority(priority);
     trans.setRate(rate);
+    trans.setTag(tag);
     if (numServers) {
         trans.setKServerSemantics(numServers.get());
     } else {
