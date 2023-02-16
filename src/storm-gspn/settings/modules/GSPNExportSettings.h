@@ -51,6 +51,11 @@ class GSPNExportSettings : public ModuleSettings {
      */
     std::string getWriteToJaniFilename() const;
 
+    /**
+     * Returns the name of the weight file for GSPN 
+     */
+    std::string getWriteToWeightFilename() const;
+
     /*!
      * Returns whether a set of standard properties is to be added when exporting to jani
      */

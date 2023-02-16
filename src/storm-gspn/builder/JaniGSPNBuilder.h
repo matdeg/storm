@@ -46,6 +46,7 @@ class JaniGSPNBuilder {
 
     void addEdges(storm::jani::Automaton& automaton, uint64_t locId);
     void addEdgesSingle(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId);
+    void buildWeightFile(storm::jani::Model* model);
 
     storm::jani::Variable const& addDeadlockTransientVariable(storm::jani::Model* model, std::string name, bool ignoreCapacities = false,
                                                               bool ignoreInhibitorArcs = false, bool ignoreEmptyPlaces = false);
@@ -54,6 +55,7 @@ class JaniGSPNBuilder {
     storm::gspn::GSPN const& gspn;
     std::map<uint64_t, storm::jani::Variable const*> vars;
     std::shared_ptr<storm::expressions::ExpressionManager> expressionManager;
+    std::ofstream myfile;
 };
 }  // namespace builder
 }  // namespace storm

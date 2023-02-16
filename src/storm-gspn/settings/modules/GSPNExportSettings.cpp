@@ -91,6 +91,13 @@ std::string GSPNExportSettings::getWriteToJaniFilename() const {
     return this->getOption(writeToJaniOptionName).getArgumentByName("filename").getValueAsString();
 }
 
+std::string GSPNExportSettings::getWriteToWeightFilename() const {
+    std::string fname = GSPNExportSettings::getWriteToJaniFilename();
+    fname.erase (fname.end()-4,fname.end());
+    fname.append("json");
+    return fname;
+}
+
 bool GSPNExportSettings::isAddJaniPropertiesSet() const {
     return this->getOption(addJaniPropertiesOptionName).getHasOptionBeenSet();
 }
