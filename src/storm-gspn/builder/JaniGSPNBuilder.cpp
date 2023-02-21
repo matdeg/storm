@@ -25,10 +25,11 @@ storm::jani::Model* JaniGSPNBuilder::build(std::string const& automatonName) {
     addVariables(model);
     addActions(model);
     uint64_t locId = addLocation(mainAutomaton);
-    if (false) {
+    auto exportSettings = storm::settings::getModule<storm::settings::modules::GSPNExportSettings>();
+    if (!exportSettings.isForceNonDeterminism()) {
         addEdges(mainAutomaton, locId);
     } else {
-        addEdgesSingle(model,mainAutomaton, locId);
+        addLabeledEdges(model,mainAutomaton, locId);
         buildWeightFile(model);
     }
     model->addAutomaton(mainAutomaton);
@@ -93,7 +94,7 @@ void JaniGSPNBuilder::buildWeightFile(storm::jani::Model* model) {
     o << std::setw(4) << jsf << std::endl;
 }
 
-void JaniGSPNBuilder::addEdgesSingle(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId) {
+void JaniGSPNBuilder::addLabeledEdges(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId) {
 
     for (auto const& trans : gspn.getImmediateTransitions()) {
         if (trans.noWeightAttached()) {

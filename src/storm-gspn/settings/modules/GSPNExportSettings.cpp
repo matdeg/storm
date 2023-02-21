@@ -16,6 +16,7 @@ const std::string GSPNExportSettings::moduleName = "exportGspn";
 
 const std::string GSPNExportSettings::writeToDotOptionName = "gspn-dot-output";
 
+const std::string GSPNExportSettings::forceNonDeterminismOptionName = "force-non-determinism";
 const std::string GSPNExportSettings::writeToPnmlOptionName = "to-pnml";
 const std::string GSPNExportSettings::writeToPnproOptionName = "to-pnpro";
 const std::string GSPNExportSettings::writeToJsonOptionName = "to-json";
@@ -29,6 +30,8 @@ const std::string GSPNExportSettings::displayStatsOptionName = "show-stats";
 GSPNExportSettings::GSPNExportSettings() : ModuleSettings(moduleName) {
     this->addOption(storm::settings::OptionBuilder(moduleName, writeToDotOptionName, false, "Destination for the dot output.")
                         .addArgument(storm::settings::ArgumentBuilder::createStringArgument("filename", "path to file").build())
+                        .build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, forceNonDeterminismOptionName, false, "Forces a non-deterministic choice between transitions in the Jani file, weights are stored in an additional Json file.")
                         .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, writeToPnmlOptionName, false, "Destination for the pnml output")
                         .addArgument(storm::settings::ArgumentBuilder::createStringArgument("filename", "path to file").build())
@@ -100,6 +103,10 @@ std::string GSPNExportSettings::getWriteToWeightFilename() const {
 
 bool GSPNExportSettings::isAddJaniPropertiesSet() const {
     return this->getOption(addJaniPropertiesOptionName).getHasOptionBeenSet();
+}
+
+bool GSPNExportSettings::isForceNonDeterminism() const {
+    return this->getOption(forceNonDeterminismOptionName).getHasOptionBeenSet();
 }
 
 bool GSPNExportSettings::isDisplayStatsSet() const {

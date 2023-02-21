@@ -45,7 +45,7 @@ class JaniGSPNBuilder {
     uint64_t addLocation(storm::jani::Automaton& automaton);
 
     void addEdges(storm::jani::Automaton& automaton, uint64_t locId);
-    void addEdgesSingle(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId);
+    void addLabeledEdges(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId);
     void buildWeightFile(storm::jani::Model* model);
 
     storm::jani::Variable const& addDeadlockTransientVariable(storm::jani::Model* model, std::string name, bool ignoreCapacities = false,

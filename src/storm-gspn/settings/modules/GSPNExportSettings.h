@@ -61,6 +61,8 @@ class GSPNExportSettings : public ModuleSettings {
      */
     bool isAddJaniPropertiesSet() const;
 
+    bool isForceNonDeterminism() const;
+
     bool isDisplayStatsSet() const;
 
     bool isWriteStatsToFileSet() const;
@@ -73,6 +75,7 @@ class GSPNExportSettings : public ModuleSettings {
     static const std::string moduleName;
 
    private:
+    static const std::string forceNonDeterminismOptionName;
     static const std::string writeToDotOptionName;
     static const std::string writeToPnmlOptionName;
     static const std::string writeToPnproOptionName;

@@ -8,6 +8,7 @@
 
 #include "GreatSpnEditorProjectParser.h"
 #include "PnmlParser.h"
+#include "SlpnParser.h"
 
 namespace storm {
 namespace parser {
@@ -22,6 +23,7 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to initialize xercesc\n");
     }
 
+    bool isSlpn = (filename.substr(filename.length()-4,4) == "slpn");
     auto parser = new xercesc::XercesDOMParser();
     parser->setValidationScheme(xercesc::XercesDOMParser::Val_Always);
     parser->setDoNamespaces(false);
@@ -31,8 +33,17 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
 
     auto errHandler = (xercesc::ErrorHandler*)new xercesc::HandlerBase();
     parser->setErrorHandler(errHandler);
-
     // parse file
+
+    if(isSlpn) {
+        SlpnParser p(constantDefinitions);
+        return p.parse(filename);
+        // clean up
+        delete parser;
+        delete errHandler;
+        xercesc::XMLPlatformUtils::Terminate();
+    }
+
     try {
         parser->parse(filename.c_str());
     } catch (xercesc::XMLException const& toCatch) {
@@ -51,7 +62,8 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
         // Error occurred while parsing the file. Abort constructing the gspn since the input file is not valid
         // or the parser run into a problem.
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to parse pnml file.\n");
-    }
+    } 
+    
 
     // build gspn by traversing the DOM object
     parser->getDocument()->normalizeDocument();
