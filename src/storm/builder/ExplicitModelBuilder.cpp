@@ -83,13 +83,14 @@ ExplicitModelBuilder<ValueType, RewardModelType, StateType>::ExplicitModelBuilde
 template<typename ValueType, typename RewardModelType, typename StateType>
 std::shared_ptr<storm::models::sparse::Model<ValueType, RewardModelType>> ExplicitModelBuilder<ValueType, RewardModelType, StateType>::build() {
     STORM_LOG_DEBUG("Exploration order is: " << options.explorationOrder);
-
+    
     switch (generator->getModelType()) {
         case storm::generator::ModelType::DTMC:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Dtmc, buildModelComponents());
         case storm::generator::ModelType::CTMC:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Ctmc, buildModelComponents());
         case storm::generator::ModelType::MDP:
+            std::cout << "Mdp \n";
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Mdp, buildModelComponents());
         case storm::generator::ModelType::POMDP:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Pomdp, buildModelComponents());

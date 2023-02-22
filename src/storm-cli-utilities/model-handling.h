@@ -219,16 +219,21 @@ ModelProcessingInformation getModelProcessingInformation(SymbolicInput const& in
 
     // Set the engine.
     mpi.engine = coreSettings.getEngine();
+    std::cout << "engine utilisé : " << mpi.engine << "\n";
 
     // Set whether bisimulation is to be used.
     mpi.applyBisimulation = generalSettings.isBisimulationSet();
+    std::cout << "bisimulation : " << mpi.applyBisimulation << "\n";
 
     // Set the value type used for numeric values
     if (generalSettings.isParametricSet()) {
+        std::cout << "parametric" << "\n";
         mpi.verificationValueType = ModelProcessingInformation::ValueType::Parametric;
     } else if (generalSettings.isExactSet()) {
+        std::cout << "exact" << "\n";
         mpi.verificationValueType = ModelProcessingInformation::ValueType::Exact;
     } else {
+        std::cout << "precision" << "\n";
         mpi.verificationValueType = ModelProcessingInformation::ValueType::FinitePrecision;
     }
     auto originalVerificationValueType = mpi.verificationValueType;
@@ -513,8 +518,10 @@ std::shared_ptr<storm::models::ModelBase> buildModel(SymbolicInput const& input,
     if (input.model) {
         auto builderType = storm::utility::getBuilderType(mpi.engine);
         if (builderType == storm::builder::BuilderType::Dd) {
+            std::cout << "CH \n";
             result = buildModelDd<DdType, ValueType>(input);
         } else if (builderType == storm::builder::BuilderType::Explicit || builderType == storm::builder::BuilderType::Jit) {
+            std::cout << "DH \n";
             result = buildModelSparse<ValueType>(input, buildSettings, builderType == storm::builder::BuilderType::Jit);
         }
     } else if (ioSettings.isExplicitSet() || ioSettings.isExplicitDRNSet() || ioSettings.isExplicitIMCASet()) {
@@ -1287,7 +1294,11 @@ std::shared_ptr<storm::models::ModelBase> buildPreprocessModelWithValueTypeAndDd
     }
 
     if (model) {
+        std::cout << "AH"
+                  << "\n";
         model->printModelInformationToStream(std::cout);
+        std::cout << "AH"
+                  << "\n";
     }
 
     STORM_LOG_THROW(model || input.properties.empty(), storm::exceptions::InvalidSettingsException, "No input model.");
@@ -1296,7 +1307,11 @@ std::shared_ptr<storm::models::ModelBase> buildPreprocessModelWithValueTypeAndDd
         auto preprocessingResult = preprocessModel<DdType, BuildValueType, VerificationValueType>(model, input, mpi);
         if (preprocessingResult.second) {
             model = preprocessingResult.first;
+            std::cout << "AH"
+                      << "\n";
             model->printModelInformationToStream(std::cout);
+            std::cout << "AH"
+                      << "\n";
         }
     }
     return model;
@@ -1327,6 +1342,8 @@ void processInputWithValueTypeAndDdlib(SymbolicInput const& input, ModelProcessi
             buildPreprocessExportModelWithValueTypeAndDdlib<DdType, BuildValueType, VerificationValueType>(input, mpi);
         if (model) {
             if (counterexampleSettings.isCounterexampleSet()) {
+                std::cout << "counterExample"
+                          << "\n";
                 generateCounterexamples<VerificationValueType>(model, input);
             } else {
                 verifyModel<DdType, VerificationValueType>(model, input, mpi);
@@ -1338,11 +1355,15 @@ void processInputWithValueTypeAndDdlib(SymbolicInput const& input, ModelProcessi
 template<typename ValueType>
 void processInputWithValueType(SymbolicInput const& input, ModelProcessingInformation const& mpi) {
     if (mpi.ddType == storm::dd::DdType::CUDD) {
+        std::cout << "Ddtype : CUDD"
+                  << "\n";
         STORM_LOG_ASSERT(mpi.verificationValueType == ModelProcessingInformation::ValueType::FinitePrecision &&
                              mpi.buildValueType == ModelProcessingInformation::ValueType::FinitePrecision && (std::is_same<ValueType, double>::value),
                          "Unexpected value type for Dd library cudd.");
         processInputWithValueTypeAndDdlib<storm::dd::DdType::CUDD, double>(input, mpi);
     } else {
+        std::cout << "Ddtype : Sylvan"
+                  << "\n";
         STORM_LOG_ASSERT(mpi.ddType == storm::dd::DdType::Sylvan, "Unknown DD library.");
         if (mpi.buildValueType == mpi.verificationValueType) {
             processInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, ValueType>(input, mpi);
