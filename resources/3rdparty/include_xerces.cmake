@@ -19,6 +19,7 @@ if(USE_XERCESC)
         message (STATUS "Storm (GSPN) - Linking with Xerces-c ${XercesC_VERSION}: ${XercesC_LIBRARIES}")
 
         list(APPEND STORM_GSPN_LINK_LIBRARIES ${XercesC_LIBRARIES} ${COREFOUNDATION_LIBRARY} ${CORESERVICES_LIBRARY} ${CURL_LIBRARIES})
+        list(APPEND STORM_LINK_LIBRARIES ${XercesC_LIBRARIES} ${COREFOUNDATION_LIBRARY} ${CORESERVICES_LIBRARY} ${CURL_LIBRARIES})
     else()
         set(STORM_HAVE_XERCES OFF)
         message (STATUS "Storm - Building without Xerces disables parsing XML formats (for GSPNs)")

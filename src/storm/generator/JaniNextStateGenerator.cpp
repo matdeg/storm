@@ -234,6 +234,7 @@ std::vector<StateType> JaniNextStateGenerator<ValueType, StateType>::getInitialS
             solver->add(expression);
         }
         solver->add(model.getInitialStatesExpression(this->parallelAutomata));
+        std::cout << "initial state : " << model.getInitialStatesExpression(this->parallelAutomata) << "\n";
 
         // Proceed as long as the solver can still enumerate initial states.
         while (solver->check() == storm::solver::SmtSolver::CheckResult::Sat) {
@@ -661,7 +662,8 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         }
     } else {
         allChoices = getActionChoices(locations, *this->state, stateToIdCallback);
-    }
+    }  
+    
     std::size_t totalNumberOfChoices = allChoices.size();
 
     // If there is not a single choice, we return immediately, because the state has no behavior (other than
@@ -671,7 +673,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     }
 
     // If the model is a deterministic model, we need to fuse the choices into one.
-    if (this->isDeterministicModel() && totalNumberOfChoices > 1) {
+    if (true || (this->isDeterministicModel() && totalNumberOfChoices > 1)) {
         Choice<ValueType> globalChoice;
 
         if (this->options.isAddOverlappingGuardLabelSet()) {
@@ -714,6 +716,15 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         // Move the newly fused choice in place.
         allChoices.clear();
         allChoices.push_back(std::move(globalChoice));
+        for (auto const& choice : allChoices){
+            std::cout << "<";
+            for (auto const& stateProbabilityPair : choice) {
+                std::cout << stateProbabilityPair.first << " : " << stateProbabilityPair.second << ", ";
+            }
+        std::cout << ">" << "\n";
+    }
+              
+    std::cout << "\n\n\n";
     }
 
     // Move all remaining choices in place.
@@ -730,7 +741,7 @@ template<typename ValueType, typename StateType>
 Choice<ValueType> JaniNextStateGenerator<ValueType, StateType>::expandNonSynchronizingEdge(storm::jani::Edge const& edge, uint64_t outputActionIndex,
                                                                                            uint64_t automatonIndex, CompressedState const& state,
                                                                                            StateToIdCallback stateToIdCallback) {
-    // Determine the exit rate if it's a Markovian edge.
+    // Determine the exit rate if it's a Markovian edge. 
     boost::optional<ValueType> exitRate = boost::none;
     if (edge.hasRate()) {
         exitRate = this->evaluator->asRational(edge.getRate());
@@ -1030,7 +1041,6 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                                                                                               CompressedState const& state, StateToIdCallback stateToIdCallback,
                                                                                               EdgeFilter const& edgeFilter) {
     std::vector<Choice<ValueType>> result;
-
     // To avoid reallocations, we declare some memory here here.
     // This vector will store for each automaton the set of edges with the current output and the current source location
     std::vector<EdgeSetWithIndices const*> edgeSetsMemory;
@@ -1038,10 +1048,10 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
     std::vector<typename EdgeSetWithIndices::const_iterator> edgeIteratorMemory;
 
     for (OutputAndEdges const& outputAndEdges : edges) {
-        auto const& edges = outputAndEdges.second;
+        AutomataAndEdges const& edges = outputAndEdges.second;
         if (edges.size() == 1) {
             // If the synch consists of just one element, it's non-synchronizing.
-            auto const& nonsychingEdges = edges.front();
+            std::pair<uint64_t, LocationsAndEdges> const& nonsychingEdges = edges.front();
             uint64_t automatonIndex = nonsychingEdges.first;
 
             auto edgesIt = nonsychingEdges.second.find(locations[automatonIndex]);
@@ -1065,6 +1075,7 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                         EdgeIndexSet edgeIndex{model.encodeAutomatonAndEdgeIndices(automatonIndex, indexAndEdge.first)};
                         result.back().addOriginData(boost::any(std::move(edgeIndex)));
                     }
+                    //std::cout << *indexAndEdge.second << "\n";
                 }
             }
         } else {
@@ -1163,7 +1174,6 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
             }
         }
     }
-
     return result;
 }
 

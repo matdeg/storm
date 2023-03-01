@@ -90,7 +90,6 @@ std::shared_ptr<storm::models::sparse::Model<ValueType, RewardModelType>> Explic
         case storm::generator::ModelType::CTMC:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Ctmc, buildModelComponents());
         case storm::generator::ModelType::MDP:
-            std::cout << "Mdp \n";
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Mdp, buildModelComponents());
         case storm::generator::ModelType::POMDP:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Pomdp, buildModelComponents());

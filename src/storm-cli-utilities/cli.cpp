@@ -3,6 +3,7 @@
 #include "storm-cli-utilities/resources.h"
 #include "storm-version-info/storm-version.h"
 #include "storm/io/file.h"
+#include "storm/storage/Trace.h"
 #include "storm/utility/SignalHandler.h"
 #include "storm/utility/Stopwatch.h"
 #include "storm/utility/initialize.h"

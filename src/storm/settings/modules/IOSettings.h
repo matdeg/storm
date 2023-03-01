@@ -43,6 +43,13 @@ class IOSettings : public ModuleSettings {
      */
     size_t getExportDotMaxWidth() const;
 
+    /**
+     *
+     */
+    std::string getXesFilename() const;
+
+    bool isXesSet() const;
+
     /*!
      * Retrieves whether the exportbuild option was set.
      */
@@ -377,6 +384,7 @@ class IOSettings : public ModuleSettings {
    private:
     // Define the string names of the options as constants.
     static const std::string exportDotOptionName;
+    static const std::string xesOptionName;
     static const std::string exportDotMaxWidthOptionName;
     static const std::string exportBuildOptionName;
     static const std::string exportJaniDotOptionName;

@@ -23,7 +23,6 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to initialize xercesc\n");
     }
 
-    bool isSlpn = (filename.substr(filename.length()-4,4) == "slpn");
     auto parser = new xercesc::XercesDOMParser();
     parser->setValidationScheme(xercesc::XercesDOMParser::Val_Always);
     parser->setDoNamespaces(false);
@@ -35,6 +34,7 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
     parser->setErrorHandler(errHandler);
     // parse file
 
+    bool isSlpn = (filename.substr(filename.length()-4,4) == "slpn");
     if(isSlpn) {
         SlpnParser p(constantDefinitions);
         return p.parse(filename);

@@ -13,8 +13,8 @@ namespace jani {
 
 Edge::Edge(uint64_t sourceLocationIndex, uint64_t actionIndex, boost::optional<storm::expressions::Expression> const& rate,
            std::shared_ptr<TemplateEdge> const& templateEdge,
-           std::vector<std::pair<uint64_t, storm::expressions::Expression>> const& destinationTargetLocationsAndProbabilities)
-    : sourceLocationIndex(sourceLocationIndex), actionIndex(actionIndex), rate(rate), templateEdge(templateEdge) {
+           std::vector<std::pair<uint64_t, storm::expressions::Expression>> const& destinationTargetLocationsAndProbabilities, std::string name)
+    : name(name), sourceLocationIndex(sourceLocationIndex), actionIndex(actionIndex), rate(rate), templateEdge(templateEdge) {
     // Create the concrete destinations from the template edge.
     STORM_LOG_THROW(templateEdge->getNumberOfDestinations() == destinationTargetLocationsAndProbabilities.size(), storm::exceptions::InvalidArgumentException,
                     "Sizes of template edge destinations and target locations mismatch.");
@@ -27,8 +27,8 @@ Edge::Edge(uint64_t sourceLocationIndex, uint64_t actionIndex, boost::optional<s
 
 Edge::Edge(uint64_t sourceLocationIndex, uint64_t actionIndex, boost::optional<storm::expressions::Expression> const& rate,
            std::shared_ptr<TemplateEdge> const& templateEdge, std::vector<uint64_t> const& destinationLocations,
-           std::vector<storm::expressions::Expression> const& destinationProbabilities)
-    : sourceLocationIndex(sourceLocationIndex), actionIndex(actionIndex), rate(rate), templateEdge(templateEdge) {
+           std::vector<storm::expressions::Expression> const& destinationProbabilities, std::string name)
+    : name(name), sourceLocationIndex(sourceLocationIndex), actionIndex(actionIndex), rate(rate), templateEdge(templateEdge) {
     // Create the concrete destinations from the template edge.
     STORM_LOG_THROW(templateEdge->getNumberOfDestinations() == destinationLocations.size() && destinationLocations.size() == destinationProbabilities.size(),
                     storm::exceptions::InvalidArgumentException, "Sizes of template edge destinations and target locations mismatch.");
@@ -68,6 +68,14 @@ storm::expressions::Expression const& Edge::getGuard() const {
 
 void Edge::setGuard(const expressions::Expression& guard) {
     templateEdge->setGuard(guard);
+}
+
+std::string const& Edge::getName() const {
+    return templateEdge->getName();
+}
+
+void Edge::setName(const std::string& name) {
+    templateEdge->setName(name);
 }
 
 EdgeDestination const& Edge::getDestination(uint64_t index) const {
@@ -195,6 +203,7 @@ std::ostream& operator<<(std::ostream& stream, Edge const& edge) {
                 }
                 stream << ", " << a;
             }
+            stream << "\n";
         }
         stream << "]";
     }

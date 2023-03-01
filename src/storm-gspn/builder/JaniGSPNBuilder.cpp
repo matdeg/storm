@@ -137,7 +137,8 @@ void JaniGSPNBuilder::addLabeledEdges(storm::jani::Model* model, storm::jani::Au
         std::shared_ptr<storm::jani::TemplateEdge> templateEdge = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
         automaton.registerTemplateEdge(templateEdge);
         templateEdge->addDestination(storm::jani::TemplateEdgeDestination(assignments));
-        storm::jani::Edge e(locId, model->getActionIndex(trans.getTag()), boost::none, templateEdge, destinationLocations, probabilities);
+        storm::jani::Edge e(trans.getName(),locId, model->getActionIndex(trans.getTag()), boost::none, templateEdge, destinationLocations, probabilities, trans.getName());
+        e.setGuard(destguard);
         automaton.addEdge(e);
     }
 
@@ -197,7 +198,7 @@ void JaniGSPNBuilder::addLabeledEdges(storm::jani::Model* model, storm::jani::Au
             rate = rate * enablingDegree;
         }
         templateEdge->addDestination(assignments);
-        storm::jani::Edge e(locId, model->getActionIndex(trans.getTag()), rate, templateEdge, {locId}, {expressionManager->integer(1)});
+        storm::jani::Edge e(locId, model->getActionIndex(trans.getTag()), rate, templateEdge, {locId}, {expressionManager->integer(1)},trans.getName());
         automaton.addEdge(e);
     }
 }

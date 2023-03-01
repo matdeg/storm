@@ -98,7 +98,6 @@ storm::builder::ExplicitModelBuilder<ValueType> makeExplicitModelBuilder(storm::
     if (model.isPrismProgram()) {
         generator = std::make_shared<storm::generator::PrismNextStateGenerator<ValueType, uint32_t>>(model.asPrismProgram(), options, actionMask);
     } else if (model.isJaniModel()) {
-        std::cout << "c'est ici ! \n";
         STORM_LOG_THROW(actionMask == nullptr, storm::exceptions::NotSupportedException, "Action masks for JANI are not yet supported");
         generator = std::make_shared<storm::generator::JaniNextStateGenerator<ValueType, uint32_t>>(model.asJaniModel(), options);
     } else {
@@ -124,7 +123,6 @@ std::shared_ptr<storm::models::sparse::Model<ValueType>> buildSparseModel(storm:
 
         return builder.build();
     } else {
-        std::cout << "c'est pas un JIT \n";
         storm::builder::ExplicitModelBuilder<ValueType> builder = makeExplicitModelBuilder<ValueType>(model, options);
         return builder.build();
     }

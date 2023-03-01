@@ -1,6 +1,7 @@
 #pragma once
 
 #include "storm-gspn/storage/gspn/GSPN.h"
+#include "storm-gspn/storage/gspn/Traces.h"
 
 namespace storm {
 namespace parser {

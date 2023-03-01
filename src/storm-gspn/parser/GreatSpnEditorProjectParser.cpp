@@ -359,7 +359,7 @@ void GreatSpnEditorProjectParser::traverseTransitionElement(xercesc::DOMNode con
         } else {
             // Found node or attribute which is at the moment not handled by this parser.
             // Notify the user and continue the parsing.
-            STORM_PRINT_AND_LOG("unknown attributeeeeee (node=" + storm::adapters::XMLtoString(node->getNodeName()) + "): " + name + "\n");
+            STORM_PRINT_AND_LOG("unknown attribute (node=" + storm::adapters::XMLtoString(node->getNodeName()) + "): " + name + "\n");
         }
     }
 
