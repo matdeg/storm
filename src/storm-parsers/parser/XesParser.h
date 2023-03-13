@@ -32,12 +32,13 @@ class XesParser {
 
     void addTrace(storm::storage::Trace const& trace);
     std::vector<storm::storage::Trace> getTraces();
-    storm::jani::Model getModel();
+    storm::jani::Model const& getModel();
 
    private:
     // the constructed Traces
     std::vector<storm::storage::Trace> traces;
     storm::jani::Model model;
+    uint_fast64_t traceID = 0;
 };
 } //namespace parser
 } //namespace storm

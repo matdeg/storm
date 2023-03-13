@@ -61,14 +61,6 @@ void TemplateEdge::setGuard(storm::expressions::Expression const& newGuard) {
     guard = newGuard;
 }
 
-std::string const& TemplateEdge::getName() const {
-    return name;
-}
-
-void TemplateEdge::setName(std::string const& newName) {
-    name = newName;
-}
-
 std::size_t TemplateEdge::getNumberOfDestinations() const {
     return destinations.size();
 }

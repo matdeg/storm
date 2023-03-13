@@ -66,9 +66,19 @@ class Edge {
     std::string const& getName() const;
 
     /*!
-     * Sets a new guard for this edge.
+     * Sets a new name for this edge.
      */
     void setName(std::string const& name);
+
+    /*!
+     * Retrieves the mass of this edge.
+     */
+    double const& getMass() const;
+
+    /*!
+     * Sets a new mass for this edge.
+     */
+    void setMass(double const& mass);
 
     /*!
      * Retrieves the guard of this edge.
@@ -166,6 +176,9 @@ class Edge {
     void assertValid() const;
 
    private:
+    /// the mass of the edge 
+    double mass;
+
     /// The name of the edge
     std::string name;
 

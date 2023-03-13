@@ -71,11 +71,19 @@ void Edge::setGuard(const expressions::Expression& guard) {
 }
 
 std::string const& Edge::getName() const {
-    return templateEdge->getName();
+    return name;
 }
 
 void Edge::setName(const std::string& name) {
-    templateEdge->setName(name);
+    this->name = name;
+}
+
+double const& Edge::getMass() const {
+    return mass;
+}
+
+void Edge::setMass(const double& mass) {
+    this->mass = mass;
 }
 
 EdgeDestination const& Edge::getDestination(uint64_t index) const {
@@ -201,7 +209,9 @@ std::ostream& operator<<(std::ostream& stream, Edge const& edge) {
                     first = false;
                     stream << a;
                 }
-                stream << ", " << a;
+                else {
+                    stream << ", " << a;
+                }
             }
             stream << "\n";
         }

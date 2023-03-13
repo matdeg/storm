@@ -17,7 +17,7 @@ namespace settings {
 namespace modules {
 
 const std::string IOSettings::moduleName = "io";
-const std::string IOSettings::xesOptionName = "xes";
+const std::string IOSettings::tracesInputOptionName = "traces";
 const std::string IOSettings::exportDotOptionName = "exportdot";
 const std::string IOSettings::exportDotMaxWidthOptionName = "dot-maxwidth";
 const std::string IOSettings::exportBuildOptionName = "exportbuild";
@@ -66,7 +66,7 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
             .addArgument(
                 storm::settings::ArgumentBuilder::createStringArgument("filename", "The name of the file to which the model is to be written.").build())
             .build());
-    this->addOption(storm::settings::OptionBuilder(moduleName, xesOptionName, false, "Add an automaton in the Jani Files that recognizes the given trace before analyzing (.xes file)")
+    this->addOption(storm::settings::OptionBuilder(moduleName, tracesInputOptionName, false, "traces should be given via a .xes file, they are sequence of actions of the gspn. Storm compute their probability")
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("filename", "path to file").build())
                     .build());
     this->addOption(storm::settings::OptionBuilder(
@@ -277,12 +277,12 @@ size_t IOSettings::getExportDotMaxWidth() const {
     return this->getOption(exportDotMaxWidthOptionName).getArgumentByName("width").getValueAsUnsignedInteger();
 }
 
-bool IOSettings::isXesSet() const {
-    return this->getOption(xesOptionName).getHasOptionBeenSet();
+bool IOSettings::hasTracesSet() const {
+    return this->getOption(tracesInputOptionName).getHasOptionBeenSet();
 }
 
-std::string IOSettings::getXesFilename() const {
-    return this->getOption(xesOptionName).getArgumentByName("filename").getValueAsString();
+std::string IOSettings::getTracesFilename() const {
+    return this->getOption(tracesInputOptionName).getArgumentByName("filename").getValueAsString();
 }
 
 bool IOSettings::isExportBuildSet() const {

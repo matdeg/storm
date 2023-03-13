@@ -21,9 +21,6 @@ class TemplateEdge {
     storm::expressions::Expression const& getGuard() const;
     void setGuard(storm::expressions::Expression const& newGuard);
 
-    std::string const& getName() const;
-    void setName(std::string const& newName);
-
     void addDestination(TemplateEdgeDestination const& destination);
 
     /*!
@@ -117,9 +114,6 @@ class TemplateEdge {
     TemplateEdge simplifyIndexedAssignments(bool syncronized, VariableSet const& localVars) const;
 
    private:
-    // The name of the template edge
-    std::string name;
-
     // The guard of the template edge.
     storm::expressions::Expression guard;
 

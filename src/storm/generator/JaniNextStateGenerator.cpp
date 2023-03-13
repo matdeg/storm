@@ -19,6 +19,9 @@
 
 #include "storm/storage/sparse/JaniChoiceOrigins.h"
 
+#include "storm/settings/SettingsManager.h"
+#include "storm/settings/modules/IOSettings.h"
+
 #include "storm/builder/jit/Distribution.h"
 
 #include "storm/exceptions/InvalidArgumentException.h"
@@ -234,7 +237,6 @@ std::vector<StateType> JaniNextStateGenerator<ValueType, StateType>::getInitialS
             solver->add(expression);
         }
         solver->add(model.getInitialStatesExpression(this->parallelAutomata));
-        std::cout << "initial state : " << model.getInitialStatesExpression(this->parallelAutomata) << "\n";
 
         // Proceed as long as the solver can still enumerate initial states.
         while (solver->check() == storm::solver::SmtSolver::CheckResult::Sat) {
@@ -673,7 +675,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     }
 
     // If the model is a deterministic model, we need to fuse the choices into one.
-    if (true || (this->isDeterministicModel() && totalNumberOfChoices > 1)) {
+    if (this->isDeterministicModel() && totalNumberOfChoices > 1) {
         Choice<ValueType> globalChoice;
 
         if (this->options.isAddOverlappingGuardLabelSet()) {
@@ -716,15 +718,27 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         // Move the newly fused choice in place.
         allChoices.clear();
         allChoices.push_back(std::move(globalChoice));
-        for (auto const& choice : allChoices){
-            std::cout << "<";
-            for (auto const& stateProbabilityPair : choice) {
-                std::cout << stateProbabilityPair.first << " : " << stateProbabilityPair.second << ", ";
-            }
-        std::cout << ">" << "\n";
     }
-              
-    std::cout << "\n\n\n";
+
+    // Mathis Mode.
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        Choice<ValueType> globalChoice;
+
+        double totalMass = 0.0;
+        for (auto const& choice : allChoices) {
+            uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
+            totalMass = totalMass + model.getAutomata()[0].getEdge(firstEdgeIndex).getMass();
+        }
+        for (auto const& choice : allChoices) {
+            uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
+            for (auto& stateProbabilityPair : choice) {
+                globalChoice.addProbability(stateProbabilityPair.first, stateProbabilityPair.second * model.getAutomata()[0].getEdge(firstEdgeIndex).getMass() / totalMass);
+            }
+        }
+
+        // Move the newly fused choice in place.
+        allChoices.clear();
+        allChoices.push_back(std::move(globalChoice));
     }
 
     // Move all remaining choices in place.
@@ -733,7 +747,6 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     }
 
     this->postprocess(result);
-
     return result;
 }
 
@@ -855,7 +868,7 @@ void JaniNextStateGenerator<ValueType, StateType>::generateSynchronizedDistribut
     int64_t highestEdgeAssignmentLevel = std::numeric_limits<int64_t>::min();
     uint64_t numDestinations = 1;
     for (uint_fast64_t i = 0; i < iteratorList.size(); ++i) {
-        if (this->getOptions().isBuildChoiceOriginsSet()) {
+        if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
             edgeIndices.insert(model.encodeAutomatonAndEdgeIndices(edgeCombination[i].first, iteratorList[i]->first));
         }
         storm::jani::Edge const& edge = *iteratorList[i]->second;
@@ -995,7 +1008,7 @@ void JaniNextStateGenerator<ValueType, StateType>::expandSynchronizingEdgeCombin
         Choice<ValueType>& choice = newChoices.back();
 
         // Add the edge indices if requested.
-        if (this->getOptions().isBuildChoiceOriginsSet()) {
+        if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
             choice.addOriginData(boost::any(std::move(edgeIndices)));
         }
 
@@ -1033,6 +1046,7 @@ void JaniNextStateGenerator<ValueType, StateType>::expandSynchronizingEdgeCombin
         }
 
         done = !movedIterator;
+        
     }
 }
 
@@ -1071,14 +1085,14 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                                                                 outputAndEdges.first ? outputAndEdges.first.get() : indexAndEdge.second->getActionIndex(),
                                                                 automatonIndex, state, stateToIdCallback));
 
-                    if (this->getOptions().isBuildChoiceOriginsSet()) {
+                    if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
                         EdgeIndexSet edgeIndex{model.encodeAutomatonAndEdgeIndices(automatonIndex, indexAndEdge.first)};
                         result.back().addOriginData(boost::any(std::move(edgeIndex)));
                     }
-                    //std::cout << *indexAndEdge.second << "\n";
                 }
             }
         } else {
+            
             // If the element has more than one set of edges, we need to perform a synchronization.
             STORM_LOG_ASSERT(outputAndEdges.first, "Need output action index for synchronization.");
 

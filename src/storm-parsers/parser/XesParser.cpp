@@ -12,6 +12,7 @@
 #include "storm/exceptions/UnexpectedException.h"
 #include "storm/exceptions/WrongFormatException.h"
 #include "storm/utility/macros.h"
+#include "storm/io/file.h"
 
 
 namespace storm {
@@ -43,6 +44,8 @@ std::vector<storm::storage::Trace> XesParser::parseXesTraces(std::string const& 
     auto errHandler = (xercesc::ErrorHandler*)new xercesc::HandlerBase();
     parser->setErrorHandler(errHandler);
 
+    bool other = false;
+
     // parse file
     try {
         parser->parse(filename.c_str());
@@ -61,19 +64,19 @@ std::vector<storm::storage::Trace> XesParser::parseXesTraces(std::string const& 
     } catch (...) {
         // Error occurred while parsing the file. Abort constructing the gspn since the input file is not valid
         // or the parser run into a problem.
-        STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to parse pnml file.\n");
+        STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "unabled to parse the file " + filename);
     } 
 
     // build gspn by traversing the DOM object
     parser->getDocument()->normalizeDocument();
     xercesc::DOMElement* elementRoot = parser->getDocument()->getDocumentElement();
-
     if (storm::adapters::XMLtoString(elementRoot->getTagName()) == "log") {
         traverseProjectElement(elementRoot);
         modelParsingWatch.stop();
         STORM_PRINT("Time for traces input parsing: " << modelParsingWatch << ".\n\n");
         return getTraces();
     }
+    
     // clean up
     delete parser;
     delete errHandler;
@@ -95,10 +98,12 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
 }
 
 void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
-    storm::storage::Trace trace;
-
+    storm::storage::Trace trace(getModel(), traceID);
+    traceID++;
+    bool isValidTrace = true;
+    uint_fast64_t i = 0;
     // traverse children
-    for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength(); ++i) {
+    while (isValidTrace && i < node->getChildNodes()->getLength()) {
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("event") == 0) {
@@ -106,12 +111,16 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
             int index = -1;
             if (getModel().hasAction(event)) {
                 index = getModel().getActionIndex(event);
+            } else {
+                isValidTrace = false;
             }
             trace.addEvent(index);
         }
+        i++;
     }
-    trace.setModel(getModel());
-    addTrace(trace);
+    if (isValidTrace) {
+        addTrace(trace);
+    }
 }
 
 std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) {
@@ -123,6 +132,7 @@ std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) 
             return traverseStringElement(child);
         }
     }
+    STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "No string element with conceptName child has been found in a trace in the .xes file");
 }
 
 std::string XesParser::traverseStringElement(xercesc::DOMNode const* const node) {
@@ -133,6 +143,7 @@ std::string XesParser::traverseStringElement(xercesc::DOMNode const* const node)
             return storm::adapters::XMLtoString(attr->getNodeValue());
         }
     }      
+    STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "No value has been found in the string element in the .xes file");
 }
 
 bool XesParser::isConceptName(xercesc::DOMNode const* const node) {
@@ -154,7 +165,7 @@ void XesParser::addTrace(storm::storage::Trace const& trace) {
     this->traces.emplace_back(trace);
 }
 
-storm::jani::Model XesParser::getModel() {
+storm::jani::Model const& XesParser::getModel() {
     return this->model;
 }
 

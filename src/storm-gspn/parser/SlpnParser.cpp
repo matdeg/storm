@@ -36,7 +36,7 @@ void SlpnParser::setNumberPlaces(int numberPlaces) {
 }
 
 int SlpnParser::getNumberTransitions() {
-    return this->numberPlaces;
+    return this->numberTransitions;
 }
 
 void SlpnParser::setNumberTransitions(int numberTransitions) {
@@ -76,8 +76,8 @@ storm::gspn::GSPN* SlpnParser::parse(std::string const& filename) {
             STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Wrong format for the file " + filename + ", expected line : \"# number of places\"\n");
         } 
         storm::utility::getline(o,l);
-        SlpnParser::setNumberPlaces(std::stoi(l));
-        SlpnParser::traverseMarkings(filename,o);
+        setNumberPlaces(std::stoi(l));
+        traverseMarkings(filename,o);
         builder.setGspnName("Gspn_Name");
         return builder.buildGspn(manager,constantsSubstitution);
     } else {
@@ -95,7 +95,7 @@ void SlpnParser::traverseMarkings(std::string const& filename, std::ifstream& o)
         storm::utility::getline(o,l);
         builder.addPlace(boost::none, std::stoi(l), "P" + std::to_string(i));
     }
-    SlpnParser::traverseTransitions(filename,o);
+    traverseTransitions(filename,o);
 }
 
 void SlpnParser::traverseTransitions(std::string const& filename, std::ifstream& o) {
@@ -105,13 +105,13 @@ void SlpnParser::traverseTransitions(std::string const& filename, std::ifstream&
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Wrong format for the file " + filename + ", expected line : \"# number of transitions\"\n");
     } 
     storm::utility::getline(o,l);
-    SlpnParser::setNumberTransitions(std::stoi(l));
-    SlpnParser::traverseTransition(filename,o);
+    setNumberTransitions(std::stoi(l));
+    traverseTransition(filename,o);
 }
 
 void SlpnParser::traverseTransition(std::string const& filename, std::ifstream& o) {
     std::string l;
-    for (int j = 0; j < SlpnParser::getNumberTransitions();j++) {
+    for (int j = 0; j < getNumberTransitions();j++) {
         double weight;
         std::string tag;
         storm::utility::getline(o,l);
@@ -152,11 +152,11 @@ void SlpnParser::traverseTransition(std::string const& filename, std::ifstream& 
         } 
         storm::utility::getline(o,l);
         SlpnParser::setNumberOutputPlaces(std::stoi(l));
-        for (int i = 0;i < SlpnParser::getNumberOutputPlaces();i++) {
+        for (int i = 0;i < getNumberOutputPlaces();i++) {
             storm::utility::getline(o,l);
             builder.addOutputArc("T" + std::to_string(j), "P" + l, 1);
         }
-        SlpnParser::incrementTransitionID();
+        incrementTransitionID();
     }
 }
 
