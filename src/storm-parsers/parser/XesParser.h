@@ -36,7 +36,7 @@ class XesParser {
    private:
     // the constructed Traces
     storm::storage::EventLog eventLog;
-    storm::jani::Model const& model;
+    storm::jani::Model model;
     uint_fast64_t traceID = 0;
 };
 } //namespace parser

@@ -15,7 +15,6 @@ class Trace {
 
     std::vector<uint_fast64_t> get();
 
-    storm::jani::Model getModel();
     uint_fast64_t getID();
     uint_fast64_t size();
 
