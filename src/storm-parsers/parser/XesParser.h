@@ -5,7 +5,7 @@
 #include <string>
 
 #include "storm-gspn/adapters/XercesAdapter.h"
-#include "storm/storage/Trace.h"
+#include "storm/storage/EventLog.h"
 #include "storm/storage/jani/Model.h"
 #include <xercesc/parsers/XercesDOMParser.hpp>
 
@@ -22,7 +22,7 @@ class XesParser {
      * @param filename The name of the file to parse.
      * @return The resulting GSPN.
      */
-    std::vector<storm::storage::Trace> parseXesTraces(std::string const& filename);
+    storm::storage::EventLog parseXesTraces(std::string const& filename);
 
     void traverseProjectElement(xercesc::DOMNode const* const node);
     void traverseTraceElement(xercesc::DOMNode const* const node);
@@ -30,14 +30,13 @@ class XesParser {
     std::string traverseStringElement(xercesc::DOMNode const* const node);
     bool isConceptName(xercesc::DOMNode const* const node);
 
-    void addTrace(storm::storage::Trace const& trace);
-    std::vector<storm::storage::Trace> getTraces();
-    storm::jani::Model const& getModel();
+    storm::storage::EventLog getEventLog();
+    storm::jani::Model getModel();
 
    private:
     // the constructed Traces
-    std::vector<storm::storage::Trace> traces;
-    storm::jani::Model model;
+    storm::storage::EventLog eventLog;
+    storm::jani::Model const& model;
     uint_fast64_t traceID = 0;
 };
 } //namespace parser

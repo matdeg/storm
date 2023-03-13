@@ -5,7 +5,7 @@
 
 #include "storm-gspn/adapters/XercesAdapter.h"
 #include "storm/storage/jani/Model.h"
-#include "storm/storage/Trace.h"
+#include "storm/storage/EventLog.h"
 #include "storm/utility/Stopwatch.h"
 #include "storm/exceptions/BaseException.h"
 #include "storm/exceptions/NotSupportedException.h"
@@ -19,10 +19,10 @@ namespace storm {
 namespace parser {
 
 XesParser::XesParser(storm::jani::Model const& model) : model(model) {
-    // Intentionally left empty.
+    storm::storage::EventLog eventLog(model);
 }
 
-std::vector<storm::storage::Trace> XesParser::parseXesTraces(std::string const& filename) {
+storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) {
     #ifdef STORM_HAVE_XERCES
     // initialize xercesc
     storm::utility::Stopwatch modelParsingWatch(true);
@@ -74,7 +74,9 @@ std::vector<storm::storage::Trace> XesParser::parseXesTraces(std::string const& 
         traverseProjectElement(elementRoot);
         modelParsingWatch.stop();
         STORM_PRINT("Time for traces input parsing: " << modelParsingWatch << ".\n\n");
-        return getTraces();
+        return getEventLog();
+    } else {
+        STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "no \"log\" root name in the .xes file ");
     }
     
     // clean up
@@ -98,7 +100,7 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
 }
 
 void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
-    storm::storage::Trace trace(getModel(), traceID);
+    storm::storage::Trace trace(traceID);
     traceID++;
     bool isValidTrace = true;
     uint_fast64_t i = 0;
@@ -119,7 +121,7 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
         i++;
     }
     if (isValidTrace) {
-        addTrace(trace);
+        eventLog.addTrace(trace);
     }
 }
 
@@ -157,15 +159,12 @@ bool XesParser::isConceptName(xercesc::DOMNode const* const node) {
     return false;
 }
 
-std::vector<storm::storage::Trace> XesParser::getTraces() {
-    return this->traces;
+storm::storage::EventLog XesParser::getEventLog() {
+    return this->eventLog;
 }
 
-void XesParser::addTrace(storm::storage::Trace const& trace) {
-    this->traces.emplace_back(trace);
-}
 
-storm::jani::Model const& XesParser::getModel() {
+storm::jani::Model XesParser::getModel() {
     return this->model;
 }
 

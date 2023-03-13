@@ -17,7 +17,7 @@
 
 #include <type_traits>
 
-#include "storm/storage/Trace.h"
+#include "storm/storage/EventLog.h"
 #include "storm/storage/SymbolicModelDescription.h"
 #include "storm/storage/jani/Property.h"
 #include "storm/storage/jani/visitor/JSONExporter.h"
@@ -69,7 +69,7 @@ struct SymbolicInput {
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
 
     // The traces we want to check from the .xes file
-    boost::optional<std::vector<storm::storage::Trace>> traces;
+    boost::optional<storm::storage::EventLog> eventLog;
 };
 
 void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& ioSettings, SymbolicInput& input) {
@@ -127,7 +127,7 @@ void parseProperties(storm::settings::modules::IOSettings const& ioSettings, Sym
     }
 }
 
-std::vector<storm::storage::Trace> parseTraces(storm::jani::Model const& model) {
+storm::storage::EventLog parseTraces(storm::jani::Model& model) {
     storm::parser::XesParser p(model);
     return p.parseXesTraces(storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename());
 }
@@ -172,11 +172,11 @@ SymbolicInput parseSymbolicInput() {
 
         parseProperties(ioSettings, input, propertyFilter);
 
-        std::vector<storm::storage::Trace> traces; 
+        storm::storage::EventLog eventLog; 
         if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet() && input.model && input.model->isJaniModel()) {
-            traces = parseTraces(input.model->asJaniModel());
+            eventLog = parseTraces(input.model->asJaniModel());
         }
-        input.traces = std::move(traces);
+        input.eventLog = std::move(eventLog);
         return input;
     }
 }
