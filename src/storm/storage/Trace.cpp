@@ -78,22 +78,6 @@ void Trace::updateModel() {
             assignments.clear();
         }
 
-        /*
-        // self-loop transition
-        setEmptyActionIndex(getModel().getActionIndex(" "));
-        std::vector<uint64_t> destinationLocationsLoop;
-        destinationLocationsLoop.emplace_back(locIndex);
-        if (i == size()) {
-            assignments.emplace_back(storm::jani::LValue(finalVar),expressionManager.boolean(true));
-        }
-        std::shared_ptr<storm::jani::TemplateEdge> templateEdgeLoop = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
-        automaton.registerTemplateEdge(templateEdgeLoop);
-        templateEdgeLoop->addDestination(storm::jani::TemplateEdgeDestination(assignments));
-        storm::jani::Edge eLoop(locIndex, emptyActionIndex, boost::none, templateEdgeLoop, destinationLocationsLoop, probabilities);
-        automaton.addEdge(eLoop);
-        assignments.clear();
-        */
-
         // sink transition
         assignments.emplace_back(storm::jani::LValue(finalVar),expressionManager.boolean(false));
         for (uint_fast64_t actionIndexToSink : model.getNonsilentActionIndices()) {
@@ -107,15 +91,14 @@ void Trace::updateModel() {
         }
         assignments.clear();
     }
-    /*
-    // sink self-loop
+    // sink self loop
     for (auto actionIndex : model.getNonsilentActionIndices()) {
         std::shared_ptr<storm::jani::TemplateEdge> templateEdgeSink = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
         automaton.registerTemplateEdge(templateEdgeSink);
         templateEdgeSink->addDestination(storm::jani::TemplateEdgeDestination(assignments));
         storm::jani::Edge eSink(locIndexSink, actionIndex, boost::none, templateEdgeSink, destinationLocationsSink, probabilities);
         automaton.addEdge(eSink);
-    }*/
+    }
     model.addAutomaton(automaton);
 
     auto finalFormula = std::make_shared<storm::logic::AtomicExpressionFormula>(finalVar.getExpressionVariable().getExpression() && model.getGlobalVariable("deadl").getExpressionVariable().getExpression());
