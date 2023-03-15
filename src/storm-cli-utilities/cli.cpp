@@ -261,12 +261,10 @@ void processOptionsTraces() {
     storm::utility::Stopwatch::MilisecondType preprocessingTime = 0;
 
     auto eventLog = *symbolicInput.eventLog;
-    std::cout << eventLog.getModel() << "\n\n";
     eventLog.updateModel();
     symbolicInput.model = eventLog.getModel();
     symbolicInput.properties = eventLog.getProperties();
     symbolicInput.model->asJaniModel().setStandardSystemComposition();
-    std::cout << symbolicInput.model->asJaniModel() << "\n\n";
     // Obtain settings for model processing
     ModelProcessingInformation mpi;
 

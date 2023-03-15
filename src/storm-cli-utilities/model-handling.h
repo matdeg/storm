@@ -127,9 +127,13 @@ void parseProperties(storm::settings::modules::IOSettings const& ioSettings, Sym
     }
 }
 
-storm::storage::EventLog parseTraces(storm::jani::Model& model) {
+storm::storage::EventLog parseTraces(storm::jani::Model const& model) {
+    std::cout << model.getJaniVersion() << "\n\n";
     storm::parser::XesParser p(model);
-    return p.parseXesTraces(storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename());
+    std::cout << p.getModel().getJaniVersion() << "\n\n";
+    auto eventLog = p.parseXesTraces(storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename());
+    std::cout << eventLog.getModel().getJaniVersion() << "\n\n";
+    return eventLog;
 }
 
 SymbolicInput parseSymbolicInputQvbs(storm::settings::modules::IOSettings const& ioSettings) {

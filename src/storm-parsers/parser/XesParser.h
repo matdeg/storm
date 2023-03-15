@@ -8,6 +8,8 @@
 #include "storm/storage/EventLog.h"
 #include "storm/storage/jani/Model.h"
 #include <xercesc/parsers/XercesDOMParser.hpp>
+#include "storm/settings/SettingsManager.h"
+#include "storm/settings/modules/IOSettings.h"
 
 namespace storm {
 namespace parser {
@@ -35,6 +37,7 @@ class XesParser {
 
    private:
     // the constructed Traces
+    int limit = std::numeric_limits<int>::max();
     storm::storage::EventLog eventLog;
     storm::jani::Model model;
     uint_fast64_t traceID = 0;

@@ -31,31 +31,23 @@ std::vector<storm::jani::Property> EventLog::getProperties() {
 
 void EventLog::updateModel() {
 
-    std::cout << "flag 0\n";
     auto & expressionManager = model.getManager();
     for (storm::storage::Trace trace : traces) {
-        std::cout << "flag 0\n";
         uint_fast64_t id = trace.getID();
-        std::cout << "flag 1\n";
         std::string idStr = std::to_string(id);
-        std::cout << "flag 0\n";
         storm::expressions::Variable finalExpression = expressionManager.declareBooleanVariable("final_" + idStr);
-        std::cout << "flag 4\n";
         std::shared_ptr<storm::jani::Variable> janiVar = storm::jani::Variable::makeBooleanVariable("final_" + idStr, finalExpression, expressionManager.boolean(false),false);
         storm::jani::Variable const& finalVar = model.addVariable(*janiVar);
-        std::cout << "flag 8\n";
         storm::jani::Automaton automaton("trace_automaton_" + idStr,expressionManager.declareIntegerVariable("loc_0_" + idStr));
         for (uint_fast64_t i = 0; i <= trace.size(); i++) {
             automaton.addLocation(storm::jani::Location("loc_" + std::to_string(i) + "_" + idStr));
         }
-        std::cout << "flag 0\n";
         automaton.addLocation(storm::jani::Location("loc_sink_" + idStr));
         automaton.addInitialLocation("loc_0_" + idStr);
 
         storm::expressions::Expression guard = expressionManager.boolean(true);
         std::vector<storm::expressions::Expression> probabilities;
         probabilities.emplace_back(expressionManager.rational(1.0));
-        std::cout << "flag 9\n";
         std::vector<storm::jani::Assignment> assignments;
         uint_fast64_t locIndexSink = automaton.getLocationIndex("loc_sink_" + idStr);
         std::vector<uint64_t> destinationLocationsSink;
@@ -94,6 +86,14 @@ void EventLog::updateModel() {
                 }
             }
             assignments.clear();
+        }
+        // sink self loop
+        for (auto actionIndex : model.getNonsilentActionIndices()) {
+            std::shared_ptr<storm::jani::TemplateEdge> templateEdgeSink = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
+            automaton.registerTemplateEdge(templateEdgeSink);
+            templateEdgeSink->addDestination(storm::jani::TemplateEdgeDestination(assignments));
+            storm::jani::Edge eSink(locIndexSink, actionIndex, boost::none, templateEdgeSink, destinationLocationsSink, probabilities);
+            automaton.addEdge(eSink);
         }
         model.addAutomaton(automaton);
 

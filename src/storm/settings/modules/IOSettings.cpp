@@ -17,6 +17,7 @@ namespace settings {
 namespace modules {
 
 const std::string IOSettings::moduleName = "io";
+const std::string IOSettings::limitTracesOptionName = "limit-traces";
 const std::string IOSettings::tracesInputOptionName = "traces";
 const std::string IOSettings::exportDotOptionName = "exportdot";
 const std::string IOSettings::exportDotMaxWidthOptionName = "dot-maxwidth";
@@ -68,6 +69,9 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
             .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, tracesInputOptionName, false, "traces should be given via a .xes file, they are sequence of actions of the gspn. Storm compute their probability")
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("filename", "path to file").build())
+                    .build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, limitTracesOptionName, false, "limit the number of traces managed by storm")
+                    .addArgument(storm::settings::ArgumentBuilder::createUnsignedIntegerArgument("limit", "limit of number of traces").build())
                     .build());
     this->addOption(storm::settings::OptionBuilder(
                         moduleName, exportDotMaxWidthOptionName, false,
@@ -283,6 +287,14 @@ bool IOSettings::hasTracesSet() const {
 
 std::string IOSettings::getTracesFilename() const {
     return this->getOption(tracesInputOptionName).getArgumentByName("filename").getValueAsString();
+}
+
+bool IOSettings::hasTracesLimit() const {
+    return this->getOption(limitTracesOptionName).getHasOptionBeenSet();
+}
+
+uint_fast64_t IOSettings::getTracesLimit() const {
+    return this->getOption(limitTracesOptionName).getArgumentByName("limit").getValueAsUnsignedInteger();
 }
 
 bool IOSettings::isExportBuildSet() const {

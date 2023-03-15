@@ -18,9 +18,7 @@
 namespace storm {
 namespace parser {
 
-XesParser::XesParser(storm::jani::Model const& model) : model(model) {
-    storm::storage::EventLog eventLog(model);
-}
+XesParser::XesParser(storm::jani::Model const& model) : model(model), eventLog(model) {}
 
 storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) {
     #ifdef STORM_HAVE_XERCES
@@ -34,6 +32,8 @@ storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) 
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to initialize xercesc\n");
     }
 
+    std::cout << model.getJaniVersion() << "\n\n";
+    std::cout << getModel().getJaniVersion() << "\n\n";
     auto parser = new xercesc::XercesDOMParser();
     parser->setValidationScheme(xercesc::XercesDOMParser::Val_Always);
     parser->setDoNamespaces(false);
@@ -70,11 +70,15 @@ storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) 
     // build gspn by traversing the DOM object
     parser->getDocument()->normalizeDocument();
     xercesc::DOMElement* elementRoot = parser->getDocument()->getDocumentElement();
+    if(storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesLimit()) {
+        limit = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesLimit();
+    }
     if (storm::adapters::XMLtoString(elementRoot->getTagName()) == "log") {
         traverseProjectElement(elementRoot);
         modelParsingWatch.stop();
         STORM_PRINT("Time for traces input parsing: " << modelParsingWatch << ".\n\n");
         return getEventLog();
+
     } else {
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "no \"log\" root name in the .xes file ");
     }
@@ -90,7 +94,7 @@ storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) 
 
 void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
     // traverse children
-    for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength(); ++i) {
+    for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength() && traceID < limit; ++i) {
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("trace") == 0) {
@@ -101,7 +105,6 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
 
 void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
     storm::storage::Trace trace(traceID);
-    traceID++;
     bool isValidTrace = true;
     uint_fast64_t i = 0;
     // traverse children
@@ -123,6 +126,7 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
     if (isValidTrace) {
         eventLog.addTrace(trace);
     }
+    traceID++;
 }
 
 std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) {
