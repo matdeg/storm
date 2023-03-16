@@ -2,6 +2,7 @@
 #include "storm/storage/jani/Property.h"
 #include "storm/storage/jani/Model.h"
 #include "storm/storage/Trace.h"
+#include "storm/logic/BinaryBooleanOperatorType.h"
 
 namespace storm {
 namespace storage {
@@ -39,8 +40,11 @@ void Trace::updateModel() {
     auto & expressionManager = model.getManager();
 
     storm::expressions::Variable finalExpression = expressionManager.declareBooleanVariable("final_" + std::to_string(id));
-    std::shared_ptr<storm::jani::Variable> janiVar = storm::jani::Variable::makeBooleanVariable("final_" + std::to_string(id), finalExpression, expressionManager.boolean(false),false);
-    storm::jani::Variable const& finalVar = model.addVariable(*janiVar);
+    std::shared_ptr<storm::jani::Variable> janiFinalVar = storm::jani::Variable::makeBooleanVariable("final_" + std::to_string(id), finalExpression, expressionManager.boolean(false),true);
+    storm::jani::Variable const& finalVar = model.addVariable(*janiFinalVar);
+    storm::expressions::Variable sinkExpression = expressionManager.declareBooleanVariable("sink_" + std::to_string(id));
+    std::shared_ptr<storm::jani::Variable> janiSinkVar = storm::jani::Variable::makeBooleanVariable("sink_" + std::to_string(id), sinkExpression, expressionManager.boolean(false),true);
+    storm::jani::Variable const& sinkVar = model.addVariable(*janiSinkVar);
 
     storm::jani::Automaton automaton("trace_automaton",expressionManager.declareIntegerVariable("loc_0_" + std::to_string(id)));
     for (uint_fast64_t i = 0; i <= size(); i++) {
@@ -53,11 +57,18 @@ void Trace::updateModel() {
     std::vector<storm::expressions::Expression> probabilities;
     probabilities.emplace_back(expressionManager.rational(1.0));
     std::vector<storm::jani::Assignment> assignments;
-
+    
     uint_fast64_t locIndexSink = automaton.getLocationIndex("loc_sink");
     std::vector<uint64_t> destinationLocationsSink;
     destinationLocationsSink.emplace_back(locIndexSink);
+    assignments.emplace_back(storm::jani::LValue(sinkVar),expressionManager.boolean(true));
+    automaton.getLocation(locIndexSink).addTransientAssignment(assignments.front());
+    assignments.clear();
 
+    auto last_index = automaton.getLocationIndex("loc_" + std::to_string(size()));
+    assignments.emplace_back(storm::jani::LValue(finalVar),expressionManager.boolean(true));
+    automaton.getLocation(last_index).addTransientAssignment(assignments.front());
+    assignments.clear();
     for (uint_fast64_t i = 0; i <= size(); i++) {
         // event transition
         uint_fast64_t actionIndex = -1;
@@ -67,15 +78,11 @@ void Trace::updateModel() {
         if (i < size()) {
             actionIndex = get()[i];
             destinationLocations.emplace_back(automaton.getLocationIndex("loc_" + std::to_string(i+1)));
-            if (i+1 == size()) {
-                assignments.emplace_back(storm::jani::LValue(finalVar),expressionManager.boolean(true));
-            }
             std::shared_ptr<storm::jani::TemplateEdge> templateEdge = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
             automaton.registerTemplateEdge(templateEdge);
             templateEdge->addDestination(storm::jani::TemplateEdgeDestination(assignments));
             storm::jani::Edge e(locIndex, actionIndex, boost::none, templateEdge, destinationLocations, probabilities);
             automaton.addEdge(e);
-            assignments.clear();
         }
 
         /*
@@ -95,7 +102,6 @@ void Trace::updateModel() {
         */
 
         // sink transition
-        assignments.emplace_back(storm::jani::LValue(finalVar),expressionManager.boolean(false));
         for (uint_fast64_t actionIndexToSink : model.getNonsilentActionIndices()) {
             if (actionIndexToSink != actionIndex) {
                 std::shared_ptr<storm::jani::TemplateEdge> templateEdgeSink = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
@@ -118,13 +124,14 @@ void Trace::updateModel() {
     }*/
     model.addAutomaton(automaton);
 
-    auto finalFormula = std::make_shared<storm::logic::AtomicExpressionFormula>(finalVar.getExpressionVariable().getExpression() && model.getGlobalVariable("deadl").getExpressionVariable().getExpression());
+    auto leftFormula = std::make_shared<storm::logic::AtomicExpressionFormula>(!sinkVar.getExpressionVariable().getExpression());
+    auto rightFormula = std::make_shared<storm::logic::AtomicExpressionFormula>(finalVar.getExpressionVariable().getExpression() && model.getGlobalVariable("deadl").getExpressionVariable().getExpression());
     storm::solver::OptimizationDirection optimizationDirection = storm::solver::OptimizationDirection::Maximize;
     std::set<storm::expressions::Variable> emptySet;
 
     // Build reachability property
     auto reachFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(
-        std::make_shared<storm::logic::EventuallyFormula>(finalFormula, storm::logic::FormulaContext::Probability),
+        std::make_shared<storm::logic::UntilFormula>(leftFormula, rightFormula),
         storm::logic::OperatorInformation(optimizationDirection));
     standardProperties.emplace_back("MaxPrReachFinal", reachFormula, emptySet,
                                     "The maximal probability to eventually reach a final state.");
