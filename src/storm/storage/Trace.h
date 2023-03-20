@@ -12,7 +12,6 @@ class Trace {
 
     Trace(uint_fast64_t id);
     void addEvent(uint_fast64_t k);
-
     std::vector<uint_fast64_t> get();
 
     uint_fast64_t getID();
@@ -22,6 +21,8 @@ class Trace {
     std::vector<uint_fast64_t> trace; 
     uint_fast64_t id;
 };
+
+std::ostream& operator<<(std::ostream& out, Trace trace);
 
 }  // namespace storage
 }  // namespace storm

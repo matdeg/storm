@@ -23,6 +23,16 @@ uint_fast64_t Trace::getID() {
 uint_fast64_t Trace::size() {
     return get().size();
 }
+
+std::ostream& operator<< (std::ostream& os, Trace ttrace) {
+    std::vector<uint_fast64_t> trace = ttrace.get();
+    for(uint_fast64_t j : trace) {
+        os << j << ", ";
+    }
+    os << "\n";
+    return os;
+}
+
    
 
 }  // namespace storage
