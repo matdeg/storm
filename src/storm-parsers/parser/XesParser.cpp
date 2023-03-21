@@ -20,7 +20,7 @@ namespace parser {
 
 XesParser::XesParser(storm::jani::Model const& model) : model(model), eventLog(model) {}
 
-storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) {
+storm::storage::EventLog& XesParser::parseXesTraces(std::string const& filename) {
     #ifdef STORM_HAVE_XERCES
     // initialize xercesc
     storm::utility::Stopwatch modelParsingWatch(true);
@@ -32,8 +32,6 @@ storm::storage::EventLog XesParser::parseXesTraces(std::string const& filename) 
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to initialize xercesc\n");
     }
 
-    std::cout << model.getJaniVersion() << "\n\n";
-    std::cout << getModel().getJaniVersion() << "\n\n";
     auto parser = new xercesc::XercesDOMParser();
     parser->setValidationScheme(xercesc::XercesDOMParser::Val_Always);
     parser->setDoNamespaces(false);
@@ -104,6 +102,7 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
 }
 
 void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
+    storm::utility::Stopwatch traceWatch(true);
     storm::storage::Trace trace(traceID);
     bool isValidTrace = true;
     uint_fast64_t i = 0;
@@ -127,6 +126,8 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
         eventLog.addTrace(trace);
     }
     traceID++;
+    traceWatch.stop();
+    STORM_PRINT("Time for trace number ° " << traceID - 1 << " : " << traceWatch << ".\n\n");
 }
 
 std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) {
@@ -163,7 +164,7 @@ bool XesParser::isConceptName(xercesc::DOMNode const* const node) {
     return false;
 }
 
-storm::storage::EventLog XesParser::getEventLog() {
+storm::storage::EventLog& XesParser::getEventLog() {
     return this->eventLog;
 }
 

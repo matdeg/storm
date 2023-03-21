@@ -24,7 +24,7 @@ class XesParser {
      * @param filename The name of the file to parse.
      * @return The resulting GSPN.
      */
-    storm::storage::EventLog parseXesTraces(std::string const& filename);
+    storm::storage::EventLog& parseXesTraces(std::string const& filename);
 
     void traverseProjectElement(xercesc::DOMNode const* const node);
     void traverseTraceElement(xercesc::DOMNode const* const node);
@@ -32,7 +32,7 @@ class XesParser {
     std::string traverseStringElement(xercesc::DOMNode const* const node);
     bool isConceptName(xercesc::DOMNode const* const node);
 
-    storm::storage::EventLog getEventLog();
+    storm::storage::EventLog& getEventLog();
     storm::jani::Model getModel();
 
    private:

@@ -258,10 +258,10 @@ void processOptionsTraces() {
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
 
-    storm::utility::Stopwatch::MilisecondType preprocessingTime = 0;
-
+    storm::utility::Stopwatch watch(true);
     auto eventLog = *symbolicInput.eventLog;
     eventLog.updateModel();
+    STORM_PRINT("Time for generating tree automaton: " << watch << "\n\n");
     symbolicInput.model = eventLog.getModel();
     symbolicInput.properties = eventLog.getProperties();
     symbolicInput.model->asJaniModel().setStandardSystemComposition();
@@ -270,10 +270,8 @@ void processOptionsTraces() {
 
     // Preprocess the symbolic input
     storm::utility::Stopwatch preprocessWatch(true);
-    storm::utility::Stopwatch::MilisecondType ref =  preprocessWatch.getTimeInMilliseconds();
     mpi = preprocessSymbolicInput2(symbolicInput);
     preprocessWatch.stop();
-    preprocessingTime = preprocessingTime + preprocessWatch.getTimeInMilliseconds() - ref;
     STORM_PRINT("Time for preprocessing: " << preprocessWatch << "\n\n");
 
     STORM_LOG_WARN_COND(mpi.isCompatible,
@@ -301,7 +299,6 @@ void processOptionsTraces() {
         processInputWithValueType<double>(symbolicInput, mpi);
     #endif
 
-    STORM_PRINT("Time for preprocessing: " << preprocessingTime << " ms.\n\n");
 }
 
 void processOptions() {

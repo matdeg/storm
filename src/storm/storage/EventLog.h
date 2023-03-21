@@ -22,9 +22,10 @@ class EventLog {
     storm::jani::Model getModel();
 
     uint_fast64_t size();
-    void EventLog::initialize();
+    void initialize();
 
-    void updateModel(uint_fast_64 t);
+    void updateModel(uint_fast64_t t);
+    void updateModel();
 
     std::vector<storm::jani::Property> getProperties();
 
@@ -33,6 +34,7 @@ class EventLog {
    private:
     uint_fast64_t minAutomata = 100;
     std::vector<storm::storage::Trace> traces; 
+    std::vector<uint_fast64_t> cuts;
     storm::jani::Model model;
     std::vector<storm::jani::Property> standardProperties;
 };
