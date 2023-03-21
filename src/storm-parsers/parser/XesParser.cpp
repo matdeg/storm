@@ -104,14 +104,18 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
 void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
     storm::utility::Stopwatch traceWatch(true);
     storm::storage::Trace trace(traceID);
+    STORM_PRINT("Time flag 0 for trace number ° " << traceID - 1 << " : " << traceWatch << ".\n\n");
     bool isValidTrace = true;
     uint_fast64_t i = 0;
     // traverse children
     while (isValidTrace && i < node->getChildNodes()->getLength()) {
+        storm::utility::Stopwatch traceWatch2(true);
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("event") == 0) {
+            
             std::string event = traverseEventElement(child);
+            traceWatch2.stop();
             int index = -1;
             if (getModel().hasAction(event)) {
                 index = getModel().getActionIndex(event);
@@ -120,6 +124,7 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
             }
             trace.addEvent(index);
         }
+        STORM_PRINT("Time child number ° " << i << "for trace number ° " << traceID - 1 << " : " << traceWatch << ".\n\n");
         i++;
     }
     if (isValidTrace) {
