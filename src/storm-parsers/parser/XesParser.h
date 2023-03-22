@@ -33,7 +33,7 @@ class XesParser {
     bool isConceptName(xercesc::DOMNode const* const node);
 
     storm::storage::EventLog& getEventLog();
-    storm::jani::Model getModel();
+    storm::jani::Model const& getModel();
 
    private:
     // the constructed Traces

@@ -258,25 +258,32 @@ void processOptionsTraces() {
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
 
-    storm::utility::Stopwatch watch(true);
-    auto eventLog = *symbolicInput.eventLog;
-    eventLog.updateModel();
-    STORM_PRINT("Time for generating tree automaton: " << watch << "\n\n");
-    symbolicInput.model = eventLog.getModel();
-    symbolicInput.properties = eventLog.getProperties();
-    symbolicInput.model->asJaniModel().setStandardSystemComposition();
-    // Obtain settings for model processing
-    ModelProcessingInformation mpi;
-
     // Preprocess the symbolic input
     storm::utility::Stopwatch preprocessWatch(true);
-    mpi = preprocessSymbolicInput2(symbolicInput);
+    ModelProcessingInformation mpi = preprocessSymbolicInput2(symbolicInput);
     preprocessWatch.stop();
     STORM_PRINT("Time for preprocessing: " << preprocessWatch << "\n\n");
 
     STORM_LOG_WARN_COND(mpi.isCompatible,
                         "The model checking query does not seem to be supported for the selected engine. Storm will try to solve the query, but you will most "
                         "likely get an error for at least one of the provided properties.");
+
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
+    }
+
+    storm::utility::Stopwatch watch(true);
+    auto eventLog = *symbolicInput.eventLog;
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().isUnionTraces()) {
+        eventLog.updateModelUnion();
+    } else {
+        eventLog.updateModel();
+    }
+    STORM_PRINT("Time for generating tree automaton: " << watch << "\n\n");
+    symbolicInput.model = eventLog.getModel();
+    symbolicInput.properties = eventLog.getProperties();
+    symbolicInput.model->asJaniModel().setStandardSystemComposition();
+    std::cout << symbolicInput.model->asJaniModel() << "\n";
 
     // Export symbolic input (if requested)
     exportSymbolicInput(symbolicInput);

@@ -173,11 +173,6 @@ SymbolicInput parseSymbolicInput() {
 
         parseProperties(ioSettings, input, propertyFilter);
 
-        storm::storage::EventLog eventLog; 
-        if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet() && input.model && input.model->isJaniModel()) {
-            eventLog = parseTraces(input.model->asJaniModel());
-        }
-        input.eventLog = std::move(eventLog);
         return input;
     }
 }
@@ -444,6 +439,7 @@ std::pair<SymbolicInput, ModelProcessingInformation> preprocessSymbolicInput(Sym
 }
 
 ModelProcessingInformation preprocessSymbolicInput2(SymbolicInput & input) {
+    
     auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
 
     // Substitute constant definitions in symbolic input.
@@ -462,7 +458,6 @@ ModelProcessingInformation preprocessSymbolicInput2(SymbolicInput & input) {
     if (input.model && input.model.get().isJaniModel()) {
         storm::jani::ModelFeatures supportedFeatures = storm::api::getSupportedJaniFeatures(storm::utility::getBuilderType(mpi.engine));
         storm::api::simplifyJaniModel(input.model.get().asJaniModel(), input.properties, supportedFeatures);
-
         const auto& buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
     }
     return mpi;

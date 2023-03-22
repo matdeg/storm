@@ -19,13 +19,13 @@ class EventLog {
     void addTrace(storm::storage::Trace trace);
     storm::storage::Trace getTrace(uint_fast64_t k);
 
-    storm::jani::Model getModel();
+    storm::jani::Model const& getModel();
 
     uint_fast64_t size();
     void initialize();
 
-    void updateModel(uint_fast64_t t);
     void updateModel();
+    void updateModelUnion();
 
     std::vector<storm::jani::Property> getProperties();
 

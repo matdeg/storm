@@ -17,6 +17,7 @@ namespace settings {
 namespace modules {
 
 const std::string IOSettings::moduleName = "io";
+const std::string IOSettings::unionTracesOptionName = "union-traces";
 const std::string IOSettings::limitTracesOptionName = "limit-traces";
 const std::string IOSettings::tracesInputOptionName = "traces";
 const std::string IOSettings::exportDotOptionName = "exportdot";
@@ -232,6 +233,11 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
                                        "Computes the steady state distribution. Result can be exported using --" + exportCheckResultOptionName + ".")
             .setIsAdvanced()
             .build());
+    this->addOption(
+        storm::settings::OptionBuilder(moduleName, unionTracesOptionName, false,
+                                       "Instead of computing the probability of each trace, computes the probability to get one of them")
+            .setIsAdvanced()
+            .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, expectedVisitingTimesOptionName, false,
                                                    "Computes the expected number of times each state is visited (DTMC) or the expected time spend in each "
                                                    "state (CTMC). Result can be exported using --" +
@@ -279,6 +285,10 @@ std::string IOSettings::getExportDotFilename() const {
 
 size_t IOSettings::getExportDotMaxWidth() const {
     return this->getOption(exportDotMaxWidthOptionName).getArgumentByName("width").getValueAsUnsignedInteger();
+}
+
+bool IOSettings::isUnionTraces() const {
+    return this->getOption(unionTracesOptionName).getHasOptionBeenSet();
 }
 
 bool IOSettings::hasTracesSet() const {
