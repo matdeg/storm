@@ -17,6 +17,7 @@ namespace settings {
 namespace modules {
 
 const std::string IOSettings::moduleName = "io";
+const std::string IOSettings::notTracesOptionName = "not-traces";
 const std::string IOSettings::unionTracesOptionName = "union-traces";
 const std::string IOSettings::limitTracesOptionName = "limit-traces";
 const std::string IOSettings::tracesInputOptionName = "traces";
@@ -238,6 +239,11 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
                                        "Instead of computing the probability of each trace, computes the probability to get one of them")
             .setIsAdvanced()
             .build());
+    this->addOption(
+        storm::settings::OptionBuilder(moduleName, notTracesOptionName, false,
+                                       "Instead of computing the probability of each trace, computes the probability to get one of them")
+            .setIsAdvanced()
+            .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, expectedVisitingTimesOptionName, false,
                                                    "Computes the expected number of times each state is visited (DTMC) or the expected time spend in each "
                                                    "state (CTMC). Result can be exported using --" +
@@ -289,6 +295,10 @@ size_t IOSettings::getExportDotMaxWidth() const {
 
 bool IOSettings::isUnionTraces() const {
     return this->getOption(unionTracesOptionName).getHasOptionBeenSet();
+}
+
+bool IOSettings::isNotTraces() const {
+    return this->getOption(notTracesOptionName).getHasOptionBeenSet();
 }
 
 bool IOSettings::hasTracesSet() const {

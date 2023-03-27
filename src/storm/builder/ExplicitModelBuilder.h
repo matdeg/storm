@@ -140,6 +140,17 @@ class ExplicitModelBuilder {
      * @param rewardModelBuilders The builders for the selected reward models.
      * @param stateAndChoiceInformationBuilder The builder for the requested information of the individual states and choices
      */
+    void buildMatricesTrace(storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilder,
+                       std::vector<RewardModelBuilder<typename RewardModelType::ValueType>>& rewardModelBuilders,
+                       StateAndChoiceInformationBuilder& stateAndChoiceInformationBuilder);
+    
+    /*!
+     * Builds the transition matrix and the transition reward matrix based for the given program.
+     *
+     * @param transitionMatrixBuilder The builder of the transition matrix.
+     * @param rewardModelBuilders The builders for the selected reward models.
+     * @param stateAndChoiceInformationBuilder The builder for the requested information of the individual states and choices
+     */
     void buildMatrices(storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilder,
                        std::vector<RewardModelBuilder<typename RewardModelType::ValueType>>& rewardModelBuilders,
                        StateAndChoiceInformationBuilder& stateAndChoiceInformationBuilder);

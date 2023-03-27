@@ -311,6 +311,12 @@ class IOSettings : public ModuleSettings {
     bool isUnionTraces() const;
 
     /*!
+     * *
+     * *
+     */
+    bool isNotTraces() const;
+
+    /*!
      * Retrieves whether the jani-property option was set
      * @return
      */
@@ -397,6 +403,7 @@ class IOSettings : public ModuleSettings {
    private:
     // Define the string names of the options as constants.
     static const std::string unionTracesOptionName;
+    static const std::string notTracesOptionName;
     static const std::string exportDotOptionName;
     static const std::string tracesInputOptionName;
     static const std::string limitTracesOptionName;

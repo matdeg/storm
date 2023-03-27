@@ -721,7 +721,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     }
 
     // Mathis Mode.
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+    if (true) {
         Choice<ValueType> globalChoice;
 
         double totalMass = 0.0;
@@ -868,7 +868,7 @@ void JaniNextStateGenerator<ValueType, StateType>::generateSynchronizedDistribut
     int64_t highestEdgeAssignmentLevel = std::numeric_limits<int64_t>::min();
     uint64_t numDestinations = 1;
     for (uint_fast64_t i = 0; i < iteratorList.size(); ++i) {
-        if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        if (this->getOptions().isBuildChoiceOriginsSet()) {
             edgeIndices.insert(model.encodeAutomatonAndEdgeIndices(edgeCombination[i].first, iteratorList[i]->first));
         }
         storm::jani::Edge const& edge = *iteratorList[i]->second;
@@ -1008,7 +1008,7 @@ void JaniNextStateGenerator<ValueType, StateType>::expandSynchronizingEdgeCombin
         Choice<ValueType>& choice = newChoices.back();
 
         // Add the edge indices if requested.
-        if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        if (this->getOptions().isBuildChoiceOriginsSet()) {
             choice.addOriginData(boost::any(std::move(edgeIndices)));
         }
 
@@ -1085,7 +1085,7 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                                                                 outputAndEdges.first ? outputAndEdges.first.get() : indexAndEdge.second->getActionIndex(),
                                                                 automatonIndex, state, stateToIdCallback));
 
-                    if (this->getOptions().isBuildChoiceOriginsSet() || storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+                    if (this->getOptions().isBuildChoiceOriginsSet()) {
                         EdgeIndexSet edgeIndex{model.encodeAutomatonAndEdgeIndices(automatonIndex, indexAndEdge.first)};
                         result.back().addOriginData(boost::any(std::move(edgeIndex)));
                     }

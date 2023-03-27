@@ -124,7 +124,6 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
     if (isValidTrace) {
         eventLog.addTrace(trace);
     }
-    std::cout << "length of the trace number °" << traceID << " is " << trace.size() << "\n";
     traceID++;
 }
 

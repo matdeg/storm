@@ -26,6 +26,7 @@ class EventLog {
 
     void updateModel();
     void updateModelUnion();
+    void updateModelNot();
 
     std::vector<storm::jani::Property> getProperties();
 

@@ -276,6 +276,8 @@ void processOptionsTraces() {
     auto eventLog = *symbolicInput.eventLog;
     if (storm::settings::getModule<storm::settings::modules::IOSettings>().isUnionTraces()) {
         eventLog.updateModelUnion();
+    } else if (storm::settings::getModule<storm::settings::modules::IOSettings>().isNotTraces()) {
+        eventLog.updateModelNot();
     } else {
         eventLog.updateModel();
     }
@@ -283,7 +285,6 @@ void processOptionsTraces() {
     symbolicInput.model = eventLog.getModel();
     symbolicInput.properties = eventLog.getProperties();
     symbolicInput.model->asJaniModel().setStandardSystemComposition();
-    std::cout << symbolicInput.model->asJaniModel() << "\n";
 
     // Export symbolic input (if requested)
     exportSymbolicInput(symbolicInput);

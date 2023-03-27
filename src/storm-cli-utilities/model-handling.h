@@ -96,7 +96,7 @@ void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& i
                 input.properties = std::move(janiInput.second);
             }
             // We add masses to edges if deterministic
-            if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+            if (true) {
                 std::string fname = ioSettings.getJaniInputFilename();
                 fname.erase(fname.end()-4,fname.end());
                 fname.append("json");
@@ -1156,11 +1156,15 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
     auto verificationCallback = [&sparseModel, &ioSettings, &mpi](std::shared_ptr<storm::logic::Formula const> const& formula,
                                                                   std::shared_ptr<storm::logic::Formula const> const& states) {
         bool filterForInitialStates = states->isInitialFormula();
+        std::cout << filterForInitialStates << "\n";
+        std::cout << *formula << "\n";
+        std::cout << *states << "\n";
         auto task = storm::api::createTask<ValueType>(formula, filterForInitialStates);
-        if (ioSettings.isExportSchedulerSet()) {
+        /* if (ioSettings.isExportSchedulerSet()) {
             task.setProduceSchedulers(true);
-        }
+        } */
         std::unique_ptr<storm::modelchecker::CheckResult> result = storm::api::verifyWithSparseEngine<ValueType>(mpi.env, sparseModel, task);
+        std::cout << *result << "\n";
 
         std::unique_ptr<storm::modelchecker::CheckResult> filter;
         if (filterForInitialStates) {
@@ -1214,7 +1218,7 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
         ++exportCount;
     };
     verifyProperties<ValueType>(input, verificationCallback, postprocessingCallback);
-    if (ioSettings.isComputeSteadyStateDistributionSet()) {
+    /* if (ioSettings.isComputeSteadyStateDistributionSet()) {
         storm::utility::Stopwatch watch(true);
         std::unique_ptr<storm::modelchecker::CheckResult> result;
         try {
@@ -1239,7 +1243,7 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
         postprocessingCallback(result);
         STORM_PRINT((storm::utility::resources::isTerminate() ? "Result till abort: " : "Result: ") << *result << '\n');
         STORM_PRINT("Time for model checking: " << watch << ".\n");
-    }
+    } */
 }
 
 template<storm::dd::DdType DdType, typename ValueType>
