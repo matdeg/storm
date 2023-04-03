@@ -348,7 +348,6 @@ void EventLog::updateModelNot() {
                 templateEdge->addDestination(storm::jani::TemplateEdgeDestination(assignments));
                 storm::jani::Edge e(locationIndex, actionIndex, boost::none, templateEdge, destinationLocations, probabilities);
                 automaton.addEdge(e);
-                
             }
         }
     }

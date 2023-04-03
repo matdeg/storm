@@ -175,6 +175,7 @@ storm::models::sparse::StateLabeling NextStateGenerator<ValueType, StateType>::l
     std::vector<StateType> const& deadlockStateIndices, std::vector<std::pair<std::string, storm::expressions::Expression>> labelsAndExpressions) {
     labelsAndExpressions.insert(labelsAndExpressions.end(), this->options.getExpressionLabels().begin(), this->options.getExpressionLabels().end());
 
+    std::cout << "ICI \n";
     // Make the labels unique.
     std::sort(labelsAndExpressions.begin(), labelsAndExpressions.end(),
               [](std::pair<std::string, storm::expressions::Expression> const& a, std::pair<std::string, storm::expressions::Expression> const& b) {

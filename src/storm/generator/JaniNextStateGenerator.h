@@ -13,7 +13,7 @@ namespace builder {
 namespace jit {
 template<typename StateType, typename ValueType>
 class Distribution;
-}
+}  // namespace jit
 }  // namespace builder
 
 namespace jani {

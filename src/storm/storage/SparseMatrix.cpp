@@ -288,7 +288,6 @@ SparseMatrix<ValueType> SparseMatrixBuilder<ValueType>::build(index_type overrid
     }
 
     bool hasEntries = currentEntryCount != 0;
-
     uint_fast64_t rowCount = hasEntries ? lastRow + 1 : 0;
 
     // If the last row group was empty, we need to add one more to the row count, because otherwise this empty row is not counted.
@@ -305,12 +304,10 @@ SparseMatrix<ValueType> SparseMatrixBuilder<ValueType>::build(index_type overrid
     }
 
     rowCount = std::max(rowCount, overriddenRowCount);
-
     // If the current row count was overridden, we may need to add empty rows.
     for (index_type i = lastRow + 1; i < rowCount; ++i) {
         rowIndications.push_back(currentEntryCount);
     }
-
     // We put a sentinel element at the last position of the row indices array. This eases iteration work,
     // as now the indices of row i are always between rowIndications[i] and rowIndications[i + 1], also for
     // the first and last row.
@@ -331,7 +328,6 @@ SparseMatrix<ValueType> SparseMatrixBuilder<ValueType>::build(index_type overrid
         STORM_LOG_THROW(entryCount == initialEntryCount, storm::exceptions::InvalidStateException,
                         "Expected " << initialEntryCount << " entries, but got " << entryCount << ".");
     }
-
     // Check whether row groups are missing some entries.
     if (hasCustomRowGrouping) {
         uint_fast64_t rowGroupCount = currentRowGroupCount;
@@ -346,7 +342,6 @@ SparseMatrix<ValueType> SparseMatrixBuilder<ValueType>::build(index_type overrid
             rowGroupIndices.get().push_back(rowCount);
         }
     }
-
     return SparseMatrix<ValueType>(columnCount, std::move(rowIndications), std::move(columnsAndValues), std::move(rowGroupIndices));
 }
 

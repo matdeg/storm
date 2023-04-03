@@ -20,6 +20,8 @@
 #include "storm/modelchecker/reachability/SparseDtmcEliminationModelChecker.h"
 #include "storm/modelchecker/rpatl/SparseSmgRpatlModelChecker.h"
 
+#include "storm/modelchecker/trace/TraceMdpModelChecker.h"
+
 #include "storm/models/symbolic/Dtmc.h"
 #include "storm/models/symbolic/MarkovAutomaton.h"
 #include "storm/models/symbolic/Mdp.h"
@@ -234,6 +236,19 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
 
 template<typename ValueType>
 typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value, std::unique_ptr<storm::modelchecker::CheckResult>>::type
+verifyWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
+                       storm::modelchecker::CheckTask<storm::logic::Formula, ValueType> const& task) {
+    std::unique_ptr<storm::modelchecker::CheckResult> result;
+    storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+    if (modelchecker.canHandle(task)) {
+        std::cout << "UFEENFOENPEZDNEIEZPIFNEFNZ\n";
+        result = modelchecker.check(env, task);
+    }
+    return result;
+}
+
+template<typename ValueType>
+typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value && false, std::unique_ptr<storm::modelchecker::CheckResult>>::type
 verifyWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
                        storm::modelchecker::CheckTask<storm::logic::Formula, ValueType> const& task) {
     std::unique_ptr<storm::modelchecker::CheckResult> result;

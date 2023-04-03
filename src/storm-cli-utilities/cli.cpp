@@ -4,6 +4,7 @@
 #include "storm-version-info/storm-version.h"
 #include "storm/io/file.h"
 #include "storm/storage/Trace.h"
+#include "storm/storage/EventLog.h"
 #include "storm/utility/SignalHandler.h"
 #include "storm/utility/Stopwatch.h"
 #include "storm/utility/initialize.h"
@@ -54,11 +55,7 @@ int64_t process(const int argc, const char** argv) {
         return -1;
     }
 
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        processOptionsTraces();
-    } else {
-        processOptions();
-    }
+    processOptions();
 
     totalTimer.stop();
     if (storm::settings::getModule<storm::settings::modules::ResourceSettings>().isPrintTimeAndMemorySet()) {
@@ -258,6 +255,7 @@ void processOptionsTraces() {
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
 
+
     // Preprocess the symbolic input
     storm::utility::Stopwatch preprocessWatch(true);
     ModelProcessingInformation mpi = preprocessSymbolicInput2(symbolicInput);
@@ -315,7 +313,16 @@ void processOptions() {
 
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
+    for (int i = 0; i < std::vector::length(symbolicInput.mode->asJaniModel().getActions()); i++) {
+        std::cout << i << " : " << symbolicInput.model->asJaniModel().getAction(i).getName() << "\n";
+    }
+    std::cout << "\n";
 
+    storm::storage::EventLog eventLog;
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        eventLog = parseTraces();
+    }
+ 
     // Obtain settings for model processing
     ModelProcessingInformation mpi;
 

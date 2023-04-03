@@ -67,9 +67,7 @@ struct SymbolicInput {
 
     // The preprocessed properties to check (in case they needed amendment).
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
-
-    // The traces we want to check from the .xes file
-    boost::optional<storm::storage::EventLog> eventLog;
+    
 };
 
 void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& ioSettings, SymbolicInput& input) {
@@ -96,7 +94,7 @@ void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& i
                 input.properties = std::move(janiInput.second);
             }
             // We add masses to edges if deterministic
-            if (true) {
+            if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
                 std::string fname = ioSettings.getJaniInputFilename();
                 fname.erase(fname.end()-4,fname.end());
                 fname.append("json");
@@ -530,7 +528,8 @@ std::shared_ptr<storm::models::ModelBase> buildModelSparse(SymbolicInput const& 
     if (buildSettings.isAddOverlappingGuardsLabelSet()) {
         options.setAddOverlappingGuardsLabel(true);
     }
-
+    
+    std::cout << "AZERT \n";
     return storm::api::buildSparseModel<ValueType>(input.model.get(), options, useJit,
                                                    storm::settings::getModule<storm::settings::modules::JitBuilderSettings>().isDoctorSet());
 }
@@ -569,6 +568,7 @@ std::shared_ptr<storm::models::ModelBase> buildModel(SymbolicInput const& input,
             result = buildModelDd<DdType, ValueType>(input);
         } else if (builderType == storm::builder::BuilderType::Explicit || builderType == storm::builder::BuilderType::Jit) {
             result = buildModelSparse<ValueType>(input, buildSettings, builderType == storm::builder::BuilderType::Jit);
+            std::cout << "AHAHAHAH \n";
         }
     } else if (ioSettings.isExplicitSet() || ioSettings.isExplicitDRNSet() || ioSettings.isExplicitIMCASet()) {
         STORM_LOG_THROW(mpi.engine == storm::utility::Engine::Sparse, storm::exceptions::InvalidSettingsException,
@@ -1339,9 +1339,11 @@ std::shared_ptr<storm::models::ModelBase> buildPreprocessModelWithValueTypeAndDd
     auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
     auto buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
     std::shared_ptr<storm::models::ModelBase> model;
+    std::cout << "AAAAAA \n";
     if (!buildSettings.isNoBuildModelSet()) {
         model = buildModel<DdType, BuildValueType>(input, ioSettings, mpi);
     }
+    std::cout << "AAAAAA \n";
 
     if (model) {
         model->printModelInformationToStream(std::cout);

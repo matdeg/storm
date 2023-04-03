@@ -644,6 +644,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
             if (this->evaluator->asBool(expressionBool.first) == expressionBool.second) {
                 // Set back transient variables to default values so we are ready to process the next state
                 this->transientVariableInformation.setDefaultValuesInEvaluator(*this->evaluator);
+                result.setExpanded();
                 return result;
             }
         }
@@ -731,6 +732,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         }
         for (auto const& choice : allChoices) {
             uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
+            uint_fast64_t actionIndex = model.getAutomata()[0].getEdge(firstEdgeIndex).getActionIndex();
             for (auto& stateProbabilityPair : choice) {
                 globalChoice.addProbability(stateProbabilityPair.first, stateProbabilityPair.second * model.getAutomata()[0].getEdge(firstEdgeIndex).getMass() / totalMass);
             }
@@ -745,7 +747,6 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     for (auto& choice : allChoices) {
         result.addChoice(std::move(choice));
     }
-
     this->postprocess(result);
     return result;
 }
