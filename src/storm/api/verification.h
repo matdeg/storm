@@ -22,6 +22,8 @@
 
 #include "storm/modelchecker/trace/TraceMdpModelChecker.h"
 
+#include "storm/storage/EventLog.h"
+
 #include "storm/models/symbolic/Dtmc.h"
 #include "storm/models/symbolic/MarkovAutomaton.h"
 #include "storm/models/symbolic/Mdp.h"
@@ -234,21 +236,9 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
     return verifyWithSparseEngine(env, ctmc, task);
 }
 
-template<typename ValueType>
-typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value, std::unique_ptr<storm::modelchecker::CheckResult>>::type
-verifyWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
-                       storm::modelchecker::CheckTask<storm::logic::Formula, ValueType> const& task) {
-    std::unique_ptr<storm::modelchecker::CheckResult> result;
-    storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
-    if (modelchecker.canHandle(task)) {
-        std::cout << "UFEENFOENPEZDNEIEZPIFNEFNZ\n";
-        result = modelchecker.check(env, task);
-    }
-    return result;
-}
 
 template<typename ValueType>
-typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value && false, std::unique_ptr<storm::modelchecker::CheckResult>>::type
+typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value, std::unique_ptr<storm::modelchecker::CheckResult>>::type
 verifyWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
                        storm::modelchecker::CheckTask<storm::logic::Formula, ValueType> const& task) {
     std::unique_ptr<storm::modelchecker::CheckResult> result;
@@ -364,6 +354,24 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
     Environment env;
     return verifyWithSparseEngine(env, model, task);
 }
+
+template<typename ValueType>
+void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
+                       storm::storage::EventLog const& eventLog) {
+    storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp,eventLog);
+    modelchecker.check2();
+    std::cout << "AH132Z4\n";
+}
+
+template<typename ValueType>
+void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
+                       storm::storage::EventLog const& eventLog) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        verifyWithSparseEngineTrace(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog);
+    }
+}
+
+
 
 template<typename ValueType>
 std::unique_ptr<storm::modelchecker::CheckResult> computeSteadyStateDistributionWithSparseEngine(

@@ -1,3 +1,4 @@
+
 #include "XesParser.h"
 #include "storm-config.h"
 #include <algorithm>
@@ -18,7 +19,7 @@
 namespace storm {
 namespace parser {
 
-XesParser::XesParser(storm::jani::Model const& model) : model(model), eventLog(model) {}
+XesParser::XesParser(storm::jani::Model const& model) : model(model) {}
 
 storm::storage::EventLog& XesParser::parseXesTraces(std::string const& filename) {
     #ifdef STORM_HAVE_XERCES

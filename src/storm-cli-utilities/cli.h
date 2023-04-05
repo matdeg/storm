@@ -35,8 +35,6 @@ bool parseOptions(const int argc, const char* argv[]);
 
 void processOptions();
 
-void processOptionsTraces();
-
 void setUrgentOptions();
 }  // namespace cli
 }  // namespace storm

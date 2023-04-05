@@ -248,79 +248,19 @@ void setUrgentOptions() {
     storm::utility::setOutputDigitsFromGeneralPrecision(storm::settings::getModule<storm::settings::modules::GeneralSettings>().getPrecision());
 }
 
-void processOptionsTraces() {
-    // Start by setting some urgent options (log levels, resources, etc.)
-    setUrgentOptions();
-
-    // Parse symbolic input (PRISM, JANI, properties, etc.)
-    SymbolicInput symbolicInput = parseSymbolicInput();
-
-
-    // Preprocess the symbolic input
-    storm::utility::Stopwatch preprocessWatch(true);
-    ModelProcessingInformation mpi = preprocessSymbolicInput2(symbolicInput);
-    preprocessWatch.stop();
-    STORM_PRINT("Time for preprocessing: " << preprocessWatch << "\n\n");
-
-    STORM_LOG_WARN_COND(mpi.isCompatible,
-                        "The model checking query does not seem to be supported for the selected engine. Storm will try to solve the query, but you will most "
-                        "likely get an error for at least one of the provided properties.");
-
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
-    }
-
-    storm::utility::Stopwatch watch(true);
-    auto eventLog = *symbolicInput.eventLog;
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().isUnionTraces()) {
-        eventLog.updateModelUnion();
-    } else if (storm::settings::getModule<storm::settings::modules::IOSettings>().isNotTraces()) {
-        eventLog.updateModelNot();
-    } else {
-        eventLog.updateModel();
-    }
-    STORM_PRINT("Time for generating tree automaton: " << watch << "\n\n");
-    symbolicInput.model = eventLog.getModel();
-    symbolicInput.properties = eventLog.getProperties();
-    symbolicInput.model->asJaniModel().setStandardSystemComposition();
-
-    // Export symbolic input (if requested)
-    exportSymbolicInput(symbolicInput);
-
-    #ifdef STORM_HAVE_CARL
-        switch (mpi.verificationValueType) {
-            case ModelProcessingInformation::ValueType::Parametric:
-                processInputWithValueType<storm::RationalFunction>(symbolicInput, mpi);
-                break;
-            case ModelProcessingInformation::ValueType::Exact:
-                processInputWithValueType<storm::RationalNumber>(symbolicInput, mpi);
-                break;
-            case ModelProcessingInformation::ValueType::FinitePrecision:
-                processInputWithValueType<double>(symbolicInput, mpi);
-                break;
-        }
-    #else
-        STORM_LOG_THROW(mpi.verificationValueType == ModelProcessingInformation::ValueType::FinitePrecision, storm::exceptions::NotSupportedException,
-                        "No exact numbers or parameters are supported in this build.");
-        processInputWithValueType<double>(symbolicInput, mpi);
-    #endif
-
-}
-
 void processOptions() {
     // Start by setting some urgent options (log levels, resources, etc.)
     setUrgentOptions();
 
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
-    for (int i = 0; i < std::vector::length(symbolicInput.mode->asJaniModel().getActions()); i++) {
+    for (int i = 0; i < (symbolicInput.model->asJaniModel().getActions()).size(); i++) {
         std::cout << i << " : " << symbolicInput.model->asJaniModel().getAction(i).getName() << "\n";
     }
     std::cout << "\n";
 
-    storm::storage::EventLog eventLog;
     if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        eventLog = parseTraces();
+        symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
     }
  
     // Obtain settings for model processing

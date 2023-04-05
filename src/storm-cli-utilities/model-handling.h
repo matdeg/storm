@@ -51,7 +51,8 @@
 #include "storm/storage/jani/localeliminator/AutomaticAction.h"
 #include "storm/storage/jani/localeliminator/JaniLocalEliminator.h"
 
-#include "storm-parsers/parser/XesParser.h"
+#include "storm-parsers/parser/zzz/XesParser.h"
+#include "storm-parsers/parser/ExplicitTraceParser.h"
 
 #include "storm/utility/Stopwatch.h"
 
@@ -67,6 +68,8 @@ struct SymbolicInput {
 
     // The preprocessed properties to check (in case they needed amendment).
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
+
+    boost::optional<storm::storage::EventLog> eventLog;
     
 };
 
@@ -94,7 +97,7 @@ void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& i
                 input.properties = std::move(janiInput.second);
             }
             // We add masses to edges if deterministic
-            if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+            if (ioSettings.hasTracesSet()) {
                 std::string fname = ioSettings.getJaniInputFilename();
                 fname.erase(fname.end()-4,fname.end());
                 fname.append("json");
@@ -126,8 +129,15 @@ void parseProperties(storm::settings::modules::IOSettings const& ioSettings, Sym
 }
 
 storm::storage::EventLog parseTraces(storm::jani::Model const& model) {
-    storm::parser::XesParser p(model);
-    auto eventLog = p.parseXesTraces(storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename());
+    std::string fname = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename();
+    storm::storage::EventLog eventLog;
+    if (fname.substr(fname.length()-3,3) == "xes") {
+        storm::parser::XesParser p(model);
+        eventLog = p.parseXesTraces(fname);
+    } else {
+        storm::parser::ExplicitTraceParser p(model);
+        eventLog = p.parseTraces(fname);
+    }
     return eventLog;
 }
 
@@ -529,7 +539,6 @@ std::shared_ptr<storm::models::ModelBase> buildModelSparse(SymbolicInput const& 
         options.setAddOverlappingGuardsLabel(true);
     }
     
-    std::cout << "AZERT \n";
     return storm::api::buildSparseModel<ValueType>(input.model.get(), options, useJit,
                                                    storm::settings::getModule<storm::settings::modules::JitBuilderSettings>().isDoctorSet());
 }
@@ -1160,9 +1169,9 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
         std::cout << *formula << "\n";
         std::cout << *states << "\n";
         auto task = storm::api::createTask<ValueType>(formula, filterForInitialStates);
-        /* if (ioSettings.isExportSchedulerSet()) {
+        if (ioSettings.isExportSchedulerSet()) {
             task.setProduceSchedulers(true);
-        } */
+        }
         std::unique_ptr<storm::modelchecker::CheckResult> result = storm::api::verifyWithSparseEngine<ValueType>(mpi.env, sparseModel, task);
         std::cout << *result << "\n";
 
@@ -1218,7 +1227,7 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
         ++exportCount;
     };
     verifyProperties<ValueType>(input, verificationCallback, postprocessingCallback);
-    /* if (ioSettings.isComputeSteadyStateDistributionSet()) {
+    if (ioSettings.isComputeSteadyStateDistributionSet()) {
         storm::utility::Stopwatch watch(true);
         std::unique_ptr<storm::modelchecker::CheckResult> result;
         try {
@@ -1243,7 +1252,7 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
         postprocessingCallback(result);
         STORM_PRINT((storm::utility::resources::isTerminate() ? "Result till abort: " : "Result: ") << *result << '\n');
         STORM_PRINT("Time for model checking: " << watch << ".\n");
-    } */
+    }
 }
 
 template<storm::dd::DdType DdType, typename ValueType>
@@ -1324,9 +1333,18 @@ typename std::enable_if<DdType == storm::dd::DdType::CUDD && !std::is_same<Value
     STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "CUDD does not support the selected data-type.");
 }
 
+template<typename ValueType>
+void verifyWithSparseEngineTrace(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
+    auto sparseModel = model->as<storm::models::sparse::Model<ValueType>>();
+    storm::api::verifyWithSparseEngineTrace<ValueType>(mpi.env, sparseModel, input.eventLog.get());
+}
+
 template<storm::dd::DdType DdType, typename ValueType>
 void verifyModel(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
-    if (model->isSparseModel()) {
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        std::cout << "aHdenzn\n";
+        verifyWithSparseEngineTrace<ValueType>(model,input,mpi);
+    } else if (model->isSparseModel()) {
         verifyWithSparseEngine<ValueType>(model, input, mpi);
     } else {
         STORM_LOG_ASSERT(model->isSymbolicModel(), "Unexpected model type.");
