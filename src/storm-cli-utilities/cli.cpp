@@ -254,15 +254,11 @@ void processOptions() {
 
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
-    for (int i = 0; i < (symbolicInput.model->asJaniModel().getActions()).size(); i++) {
-        std::cout << i << " : " << symbolicInput.model->asJaniModel().getAction(i).getName() << "\n";
-    }
-    std::cout << "\n";
 
     if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
         symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
     }
- 
+
     // Obtain settings for model processing
     ModelProcessingInformation mpi;
 

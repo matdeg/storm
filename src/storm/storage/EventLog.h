@@ -12,10 +12,10 @@ class EventLog {
    public:
 
     void addTrace(storm::storage::Trace trace);
-    storm::storage::Trace getTrace(uint_fast64_t k);
+    storm::storage::Trace getTrace(uint_fast64_t k) const;
     std::vector<storm::storage::Trace> getTraces();
 
-    uint_fast64_t size();
+    uint_fast64_t size() const;
 
    private:
     std::vector<storm::storage::Trace> traces; 

@@ -436,6 +436,7 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
     // one choice per state.
     bool deterministicModel = generator->isDeterministicModel();
 
+
     // Prepare the component builders
     storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, !deterministicModel, 0);
     std::vector<RewardModelBuilder<typename RewardModelType::ValueType>> rewardModelBuilders;
@@ -449,45 +450,43 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
     stateAndChoiceInformationBuilder.setBuildMarkovianStates(generator->getModelType() == storm::generator::ModelType::MA);
     stateAndChoiceInformationBuilder.setBuildStateValuations(generator->getOptions().isBuildStateValuationsSet());
 
-    buildMatrices(transitionMatrixBuilder, rewardModelBuilders, stateAndChoiceInformationBuilder);
 
+    buildMatrices(transitionMatrixBuilder, rewardModelBuilders, stateAndChoiceInformationBuilder);
     // Initialize the model components with the obtained information.
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
         transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount()), buildStateLabeling(),
         std::unordered_map<std::string, RewardModelType>(), !generator->isDiscreteTimeModel());
-
     uint_fast64_t numStates = modelComponents.transitionMatrix.getColumnCount();
     uint_fast64_t numChoices = modelComponents.transitionMatrix.getRowCount();
-    std::cout << modelComponents.transitionMatrix << "\n";
 
 
     // Now finalize all reward models.
-    /* for (auto& rewardModelBuilder : rewardModelBuilders) {
+    for (auto& rewardModelBuilder : rewardModelBuilders) {
         modelComponents.rewardModels.emplace(rewardModelBuilder.getName(),
                                              rewardModelBuilder.build(numChoices, modelComponents.transitionMatrix.getColumnCount(), numStates));
-    } */
+    }
     // Build the player assignment
-    /* if (stateAndChoiceInformationBuilder.isBuildStatePlayerIndications()) {
+    if (stateAndChoiceInformationBuilder.isBuildStatePlayerIndications()) {
         modelComponents.statePlayerIndications = stateAndChoiceInformationBuilder.buildStatePlayerIndications(numStates);
         modelComponents.playerNameToIndexMap = generator->getPlayerNameToIndexMap();
-    } */
+    }
     // Build Markovian states
-    /* if (stateAndChoiceInformationBuilder.isBuildMarkovianStates()) {
+    if (stateAndChoiceInformationBuilder.isBuildMarkovianStates()) {
         modelComponents.markovianStates = stateAndChoiceInformationBuilder.buildMarkovianStates(numStates);
-    } */
+    }
     // Build the choice labeling
-    /* if (stateAndChoiceInformationBuilder.isBuildChoiceLabels()) {
+    if (stateAndChoiceInformationBuilder.isBuildChoiceLabels()) {
         modelComponents.choiceLabeling = stateAndChoiceInformationBuilder.buildChoiceLabeling(numChoices);
-    } */
+    }
     // If requested, build the state valuations and choice origins
-    /* if (stateAndChoiceInformationBuilder.isBuildStateValuations()) {
+    if (stateAndChoiceInformationBuilder.isBuildStateValuations()) {
         modelComponents.stateValuations = stateAndChoiceInformationBuilder.stateValuationsBuilder().build(numStates);
-    } */
+    }
     if (stateAndChoiceInformationBuilder.isBuildChoiceOrigins()) {
         auto originData = stateAndChoiceInformationBuilder.buildDataOfChoiceOrigins(numChoices);
         modelComponents.choiceOrigins = generator->generateChoiceOrigins(originData);
     }
-    /* if (generator->isPartiallyObservable()) {
+    if (generator->isPartiallyObservable()) {
         std::vector<uint32_t> classes(stateStorage.getNumberOfStates());
         std::unordered_map<uint32_t, std::vector<std::pair<std::vector<std::string>, uint32_t>>> observationActions;
         for (auto const& bitVectorIndexPair : stateStorage.stateToId) {
@@ -499,7 +498,7 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
         if (generator->getOptions().isBuildObservationValuationsSet()) {
             modelComponents.observationValuations = generator->makeObservationValuation();
         }
-    } */
+    } 
     return modelComponents;
 }
 

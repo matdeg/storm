@@ -26,7 +26,7 @@ storm::storage::EventLog& ExplicitTraceParser::parseTraces(std::string const& fi
 
 
     while (storm::utility::getline(file,l)) {
-        if (l != "") {
+        if (l.substr(0,3) != "---") {
             int index = -1;
             if (getModel().hasAction(l)) {
                 index = getModel().getActionIndex(l);

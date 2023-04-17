@@ -1,4 +1,5 @@
 #include "storm/storage/sparse/PrismChoiceOrigins.h"
+#include "storm/storage/sparse/JaniChoiceOrigins.h"
 
 #include "storm/utility/macros.h"
 #include "storm/utility/vector.h"
@@ -166,6 +167,22 @@ void PrismChoiceOrigins::computeIdentifierJson() const {
 std::size_t PrismChoiceOrigins::hash() const {
     return 0;
 }
+
+std::vector<uint_fast64_t> const PrismChoiceOrigins::testFunction(uint_fast64_t k) const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called testFunction in PrismChoiceOrigins");
+}
+
+FlatSet<uint_fast64_t> const& PrismChoiceOrigins::getEdgeIndexSet(uint_fast64_t choiceIndex) const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called getEdgeIndexSet in PrismChoiceOrigins");
+}
+
+std::vector<uint_fast64_t> const PrismChoiceOrigins::edgeIndexToActionIndex() const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called edgeIndextoActionIndex in PrismChoiceOrigins");
+}
+
 }  // namespace sparse
 }  // namespace storage
 }  // namespace storm

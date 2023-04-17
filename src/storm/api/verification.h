@@ -358,9 +358,15 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
 template<typename ValueType>
 void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
                        storm::storage::EventLog const& eventLog) {
-    storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp,eventLog);
-    modelchecker.check2();
-    std::cout << "AH132Z4\n";
+    
+    if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "rational function are not supported yet");
+    } else {
+        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        for (uint_fast64_t i = 0; i < eventLog.size(); i++) {
+            std::cout << *modelchecker.check2(env,eventLog.getTrace(i).get()) << "\n";
+        }
+    }
 }
 
 template<typename ValueType>

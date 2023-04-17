@@ -729,6 +729,9 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         for (auto const& choice : allChoices) {
             uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
             totalMass = totalMass + model.getAutomata()[0].getEdge(firstEdgeIndex).getMass();
+            if (this->options.isBuildChoiceOriginsSet() && choice.hasOriginData()) {
+                globalChoice.addOriginData(choice.getOriginData());
+            }
         }
         for (auto const& choice : allChoices) {
             uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);

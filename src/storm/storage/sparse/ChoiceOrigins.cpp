@@ -1,5 +1,6 @@
 #include "storm/storage/sparse/ChoiceOrigins.h"
 
+#include "storm/exceptions/InvalidArgumentException.h"
 #include "storm/storage/sparse/JaniChoiceOrigins.h"
 #include "storm/storage/sparse/PrismChoiceOrigins.h"
 #include "storm/utility/vector.h"
@@ -113,6 +114,17 @@ storm::models::sparse::ChoiceLabeling ChoiceOrigins::toChoiceLabeling() const {
     }
     return result;
 }
+
+std::vector<uint_fast64_t> const ChoiceOrigins::testFunction(uint_fast64_t k) const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called test function in ChoiceOrigins");
+}
+
+std::vector<uint_fast64_t> const ChoiceOrigins::edgeIndexToActionIndex() const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called getEdgeIndexSet in ChoiceOrigins");
+}
+
 }  // namespace sparse
 }  // namespace storage
 }  // namespace storm

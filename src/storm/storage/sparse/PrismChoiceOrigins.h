@@ -17,6 +17,8 @@ namespace sparse {
 class PrismChoiceOrigins : public ChoiceOrigins {
    public:
     typedef storm::storage::FlatSet<uint_fast64_t> CommandSet;
+    template<typename Key>
+    using FlatSet = boost::container::flat_set<Key, std::less<Key>, boost::container::new_allocator<Key>>;
 
     /*!
      * Creates a new representation of the choice indices to their origin in the prism program
@@ -51,6 +53,12 @@ class PrismChoiceOrigins : public ChoiceOrigins {
     CommandSet const& getCommandSet(uint_fast64_t choiceIndex) const;
 
     std::size_t hash() const override;
+
+    virtual std::vector<uint_fast64_t> const testFunction(uint_fast64_t k) const override;
+
+    virtual FlatSet<uint_fast64_t> const& getEdgeIndexSet(uint_fast64_t choiceIndex) const override;
+
+    virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const override;
 
    protected:
     /*

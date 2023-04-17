@@ -12,7 +12,7 @@ void EventLog::addTrace(storm::storage::Trace trace) {
     this->traces.emplace_back(trace);
 }
 
-storm::storage::Trace EventLog::getTrace(uint_fast64_t k) {
+storm::storage::Trace EventLog::getTrace(uint_fast64_t k) const {
     return this->traces[k];
 }
 
@@ -20,7 +20,7 @@ std::vector<storm::storage::Trace> EventLog::getTraces() {
     return this->traces;
 }
 
-uint_fast64_t EventLog::size() {
+uint_fast64_t EventLog::size() const {
     return traces.size();
 }
 

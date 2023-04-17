@@ -103,7 +103,6 @@ storm::builder::ExplicitModelBuilder<ValueType> makeExplicitModelBuilder(storm::
     } else {
         STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Cannot build sparse model from this symbolic model description.");
     }
-    std::cout << "test2\n";
     return storm::builder::ExplicitModelBuilder<ValueType>(generator);
 }
 
@@ -124,9 +123,7 @@ std::shared_ptr<storm::models::sparse::Model<ValueType>> buildSparseModel(storm:
 
         return builder.build();
     } else {
-        std::cout << "test \n";
         storm::builder::ExplicitModelBuilder<ValueType> builder = makeExplicitModelBuilder<ValueType>(model, options);
-        std::cout << "AAAAAA26413 \n";
         return builder.build();
     }
 }

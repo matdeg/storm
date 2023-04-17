@@ -577,7 +577,6 @@ std::shared_ptr<storm::models::ModelBase> buildModel(SymbolicInput const& input,
             result = buildModelDd<DdType, ValueType>(input);
         } else if (builderType == storm::builder::BuilderType::Explicit || builderType == storm::builder::BuilderType::Jit) {
             result = buildModelSparse<ValueType>(input, buildSettings, builderType == storm::builder::BuilderType::Jit);
-            std::cout << "AHAHAHAH \n";
         }
     } else if (ioSettings.isExplicitSet() || ioSettings.isExplicitDRNSet() || ioSettings.isExplicitIMCASet()) {
         STORM_LOG_THROW(mpi.engine == storm::utility::Engine::Sparse, storm::exceptions::InvalidSettingsException,
@@ -1165,16 +1164,11 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
     auto verificationCallback = [&sparseModel, &ioSettings, &mpi](std::shared_ptr<storm::logic::Formula const> const& formula,
                                                                   std::shared_ptr<storm::logic::Formula const> const& states) {
         bool filterForInitialStates = states->isInitialFormula();
-        std::cout << filterForInitialStates << "\n";
-        std::cout << *formula << "\n";
-        std::cout << *states << "\n";
         auto task = storm::api::createTask<ValueType>(formula, filterForInitialStates);
         if (ioSettings.isExportSchedulerSet()) {
             task.setProduceSchedulers(true);
         }
         std::unique_ptr<storm::modelchecker::CheckResult> result = storm::api::verifyWithSparseEngine<ValueType>(mpi.env, sparseModel, task);
-        std::cout << *result << "\n";
-
         std::unique_ptr<storm::modelchecker::CheckResult> filter;
         if (filterForInitialStates) {
             filter = std::make_unique<storm::modelchecker::ExplicitQualitativeCheckResult>(sparseModel->getInitialStates());
@@ -1342,7 +1336,6 @@ void verifyWithSparseEngineTrace(std::shared_ptr<storm::models::ModelBase> const
 template<storm::dd::DdType DdType, typename ValueType>
 void verifyModel(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
     if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        std::cout << "aHdenzn\n";
         verifyWithSparseEngineTrace<ValueType>(model,input,mpi);
     } else if (model->isSparseModel()) {
         verifyWithSparseEngine<ValueType>(model, input, mpi);
@@ -1357,11 +1350,9 @@ std::shared_ptr<storm::models::ModelBase> buildPreprocessModelWithValueTypeAndDd
     auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
     auto buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
     std::shared_ptr<storm::models::ModelBase> model;
-    std::cout << "AAAAAA \n";
     if (!buildSettings.isNoBuildModelSet()) {
         model = buildModel<DdType, BuildValueType>(input, ioSettings, mpi);
     }
-    std::cout << "AAAAAA \n";
 
     if (model) {
         model->printModelInformationToStream(std::cout);

@@ -21,7 +21,10 @@ class JaniChoiceOrigins;
 class ChoiceOrigins {
    public:
     typedef storm::json<storm::RationalNumber> Json;
-
+    
+    template<typename Key>
+    using FlatSet = boost::container::flat_set<Key, std::less<Key>, boost::container::new_allocator<Key>>;
+    
     virtual ~ChoiceOrigins() = default;
 
     virtual bool isPrismChoiceOrigins() const;
@@ -95,6 +98,10 @@ class ChoiceOrigins {
 
     virtual std::size_t hash() const = 0;
 
+    virtual std::vector<uint_fast64_t> const testFunction(uint_fast64_t k) const;
+
+    virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const;
+
    protected:
     ChoiceOrigins(std::vector<uint_fast64_t> const& indexToIdentifierMapping);
     ChoiceOrigins(std::vector<uint_fast64_t>&& indexToIdentifierMapping);
@@ -108,6 +115,8 @@ class ChoiceOrigins {
      * Computes the identifier infos (i.e., human readable strings representing the choice origins).
      */
     virtual void computeIdentifierInfos() const = 0;
+
+    virtual FlatSet<uint_fast64_t> const& getEdgeIndexSet(uint_fast64_t choiceIndex) const = 0;
 
     /*
      * Computes the identifier infos (i.e., human readable strings representing the choice origins).

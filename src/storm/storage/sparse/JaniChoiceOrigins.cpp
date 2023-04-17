@@ -83,6 +83,23 @@ void JaniChoiceOrigins::computeIdentifierJson() const {
     }
 }
 
+std::vector<uint_fast64_t> const JaniChoiceOrigins::testFunction(uint_fast64_t k) const {
+    auto set = getEdgeIndexSet(k);
+    std::vector<uint_fast64_t> toRet = {};
+    for (int i = 0; i < set.size(); i++) {
+        toRet.emplace_back(*set.nth(i));
+    }
+    return toRet;
+}
+
+std::vector<uint_fast64_t> const JaniChoiceOrigins::edgeIndexToActionIndex() const {
+    std::vector<uint_fast64_t> toRet = {};
+    for (int i = 0; i < model->getAutomata()[0].getNumberOfEdges(); i++) {
+        toRet.emplace_back(model->getAutomata()[0].getEdge(i).getActionIndex());
+    }
+    return toRet;
+}
+
 std::size_t JaniChoiceOrigins::hash() const {
     return 0;
 }
