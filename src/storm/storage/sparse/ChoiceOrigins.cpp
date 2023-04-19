@@ -125,6 +125,11 @@ std::vector<uint_fast64_t> const ChoiceOrigins::edgeIndexToActionIndex() const {
                     "should not have called getEdgeIndexSet in ChoiceOrigins");
 }
 
+double const& ChoiceOrigins::getMass(uint_fast64_t k) const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called getMass in ChoiceOrigins");
+}
+
 }  // namespace sparse
 }  // namespace storage
 }  // namespace storm

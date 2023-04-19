@@ -102,6 +102,8 @@ class ChoiceOrigins {
 
     virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const;
 
+    virtual double const& getMass(uint_fast64_t k) const;
+
    protected:
     ChoiceOrigins(std::vector<uint_fast64_t> const& indexToIdentifierMapping);
     ChoiceOrigins(std::vector<uint_fast64_t>&& indexToIdentifierMapping);

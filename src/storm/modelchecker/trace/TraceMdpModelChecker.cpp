@@ -64,6 +64,10 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check2(En
     auto stateLabels = model.getStateLabeling();
     auto deadlocks = stateLabels.getStates("deadl");
     auto data = model.getChoiceOrigins();
+
+    /* for (auto k : deadlocks) {
+            std::cout << "deadl : " << k << "\n";
+        } */
     
     std::vector<uint_fast64_t> edgeToAction = data->edgeIndexToActionIndex();
 
@@ -80,14 +84,20 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check2(En
     
     uint_fast64_t sinkIndex = transitionMatrix.getRowCount();
     std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,0),0}};
+
     
     // Perform a search through the model.
     while (!statesToExploreTrace.empty()) {
         // Get the first state in the queue.
         uint_fast64_t depth = statesToExploreTrace.front().second;
         StateType currentIndex = statesToExploreTrace.front().first;
+        currentRowGroup = currentIndex;
         statesToExploreTrace.pop_front();
         
+        /* std::cout << "\ncurrent index is " << currentIndex << "\n";
+        std::cout << "current depth is " << depth << "\n";
+        std::cout << "current row group is " << currentRowGroup << "\n"; */
+
         bool deadl = false;
         for (auto k : deadlocks) {
             if (k == currentIndex) {
@@ -95,40 +105,59 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check2(En
             }
         }
 
-        transitionMatrixBuilderTrace.newRowGroup(currentRowGroup);
+        transitionMatrixBuilderTrace.newRowGroup(currentRow);
 
         if(!deadl && !(currentIndex == sinkIndex)) {
-            uint_fast64_t i = 0;
-            auto currentEdgeIndexSet = data->testFunction(currentIndex);
-            for (auto b : transitionMatrix.getRow(currentIndex)) {
-                auto a = b.getColumnValuePair();
-                auto nextStateIndex = a.first;
-                auto proba = a.second;
-                uint_fast64_t actionIndex = edgeToAction[currentEdgeIndexSet[i]];
-                std::pair<StateType,uint_fast64_t> nextCouple;
-                if (actionIndex == 0) {
-                    nextCouple = std::make_pair(nextStateIndex,depth);
-                } else if (actionIndex == trace[depth]) {
-                    nextCouple = std::make_pair(nextStateIndex,depth + 1);
-                } else {
-                    nextCouple = std::make_pair(sinkIndex,0);
-                }
-                if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
-                    statesToExploreTrace.emplace_back(nextCouple);
-                    coupleToIndex[nextCouple] = ++indexIncrement;
-                }
-                transitionMatrixBuilderTrace.addNextValue(currentRow, coupleToIndex[nextCouple],proba);
-                i++;
+            /* std::cout << "not trivial \n"; */
+            double totalMass = 0.0;
+            for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
+                totalMass += data->getMass(i);
             }
+            /* std::cout << "total Mass is " << totalMass << "\n"; */
+            std::map<uint_fast64_t,ValueType> indexToValue;
+
+            for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
+                double Mass = data->getMass(i);
+                uint_fast64_t actionIndex = edgeToAction[data->testFunction(i)[0]];
+                for (auto b : transitionMatrix.getRow(i)) {
+                    auto a = b.getColumnValuePair();
+                    auto nextStateIndex = a.first;
+                    auto proba = a.second;
+                    std::pair<StateType,uint_fast64_t> nextCouple;
+                    if (actionIndex == 0) {
+                        nextCouple = std::make_pair(nextStateIndex,depth);
+                    } else if (actionIndex == trace[depth]) {
+                        nextCouple = std::make_pair(nextStateIndex,depth + 1);
+                    } else {
+                        nextCouple = std::make_pair(sinkIndex,0);
+                    }
+                    if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
+                        statesToExploreTrace.emplace_back(nextCouple);
+                        coupleToIndex[nextCouple] = ++indexIncrement;
+                    }
+                    /* std::cout << "add next couple " << nextCouple.first << "," << nextCouple.second << " in line " << currentRowGroup << " with proba " << proba * Mass / totalMass <<  "\n"; */
+                    //transitionMatrixBuilderTrace.addNextValue(currentRow, coupleToIndex[nextCouple],proba * Mass / totalMass);
+                    uint_fast64_t index = coupleToIndex[nextCouple];
+                    if (indexToValue.count(index) == 0) {
+                        indexToValue[index] = proba* Mass / totalMass ;
+                    } else {
+                        indexToValue[index] = indexToValue[index] + proba* Mass / totalMass;
+                    }
+                }
+            }
+            for (const auto& [key, value] : indexToValue) {
+                transitionMatrixBuilderTrace.addNextValue(currentRow, key,value);
+            }
+
         } else {
+            /* std::cout << "trivial \n"; */
             transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
         }
         currentRow++;
-        currentRowGroup++;
     }
-    for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
+    /* for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
         std::cout << "(" << it->first.first << "," << it->first.second << ") -> " << it->second << "\n"; 
-    }
+    } */
 
 
     storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilderTrace.getCurrentRowGroupCount());
@@ -153,7 +182,7 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check2(En
         std::unordered_map<std::string, RewardModelType>());
 
 
-    std::cout << modelComponents.transitionMatrix;
+    /* std::cout << modelComponents.transitionMatrix; */
 
     auto leftFormula = storm::logic::Formula::getTrueFormula();
     auto rightFormula = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula("final"));

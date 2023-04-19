@@ -720,32 +720,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         allChoices.clear();
         allChoices.push_back(std::move(globalChoice));
     }
-
-    // Mathis Mode.
-    if (true) {
-        Choice<ValueType> globalChoice;
-
-        double totalMass = 0.0;
-        for (auto const& choice : allChoices) {
-            uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
-            totalMass = totalMass + model.getAutomata()[0].getEdge(firstEdgeIndex).getMass();
-            if (this->options.isBuildChoiceOriginsSet() && choice.hasOriginData()) {
-                globalChoice.addOriginData(choice.getOriginData());
-            }
-        }
-        for (auto const& choice : allChoices) {
-            uint_fast64_t firstEdgeIndex = *boost::any_cast<EdgeIndexSet>(std::move(choice.getOriginData())).nth(0);
-            uint_fast64_t actionIndex = model.getAutomata()[0].getEdge(firstEdgeIndex).getActionIndex();
-            for (auto& stateProbabilityPair : choice) {
-                globalChoice.addProbability(stateProbabilityPair.first, stateProbabilityPair.second * model.getAutomata()[0].getEdge(firstEdgeIndex).getMass() / totalMass);
-            }
-        }
-
-        // Move the newly fused choice in place.
-        allChoices.clear();
-        allChoices.push_back(std::move(globalChoice));
-    }
-
+ 
     // Move all remaining choices in place.
     for (auto& choice : allChoices) {
         result.addChoice(std::move(choice));

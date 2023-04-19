@@ -60,6 +60,8 @@ class PrismChoiceOrigins : public ChoiceOrigins {
 
     virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const override;
 
+    virtual double const& getMass(uint_fast64_t k) const override;
+
    protected:
     /*
      * Returns a copy of this object where the mapping of choice indices to origin identifiers is replaced by the given one.

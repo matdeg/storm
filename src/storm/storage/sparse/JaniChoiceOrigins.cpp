@@ -92,6 +92,11 @@ std::vector<uint_fast64_t> const JaniChoiceOrigins::testFunction(uint_fast64_t k
     return toRet;
 }
 
+double const& JaniChoiceOrigins::getMass(uint_fast64_t k) const {
+    uint_fast64_t edgeIndex = *getEdgeIndexSet(k).nth(0);
+    return model->getAutomata()[0].getEdge(edgeIndex).getMass();
+}
+
 std::vector<uint_fast64_t> const JaniChoiceOrigins::edgeIndexToActionIndex() const {
     std::vector<uint_fast64_t> toRet = {};
     for (int i = 0; i < model->getAutomata()[0].getNumberOfEdges(); i++) {
