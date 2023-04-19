@@ -47,9 +47,15 @@ class JaniChoiceOrigins : public ChoiceOrigins {
      * Returns the set of edges that induced the choice with the given index.
      * The edges set is represented by a set of indices that encode an automaton index and its local edge index.
      */
-    EdgeIndexSet const& getEdgeIndexSet(uint_fast64_t choiceIndex) const;
+    EdgeIndexSet const& getEdgeIndexSet(uint_fast64_t choiceIndex) const override;
 
     std::size_t hash() const override;
+
+    virtual std::vector<uint_fast64_t> const testFunction(uint_fast64_t k) const override;
+
+    virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const override;
+
+    virtual double const& getMass(uint_fast64_t k) const override;
 
    private:
     /*

@@ -3,6 +3,8 @@
 #include "storm-cli-utilities/resources.h"
 #include "storm-version-info/storm-version.h"
 #include "storm/io/file.h"
+#include "storm/storage/Trace.h"
+#include "storm/storage/EventLog.h"
 #include "storm/utility/SignalHandler.h"
 #include "storm/utility/Stopwatch.h"
 #include "storm/utility/initialize.h"
@@ -251,6 +253,10 @@ void processOptions() {
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
 
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
+    }
+
     // Obtain settings for model processing
     ModelProcessingInformation mpi;
 
@@ -264,23 +270,24 @@ void processOptions() {
     // Export symbolic input (if requested)
     exportSymbolicInput(symbolicInput);
 
-#ifdef STORM_HAVE_CARL
-    switch (mpi.verificationValueType) {
-        case ModelProcessingInformation::ValueType::Parametric:
-            processInputWithValueType<storm::RationalFunction>(symbolicInput, mpi);
-            break;
-        case ModelProcessingInformation::ValueType::Exact:
-            processInputWithValueType<storm::RationalNumber>(symbolicInput, mpi);
-            break;
-        case ModelProcessingInformation::ValueType::FinitePrecision:
-            processInputWithValueType<double>(symbolicInput, mpi);
-            break;
-    }
-#else
-    STORM_LOG_THROW(mpi.verificationValueType == ModelProcessingInformation::ValueType::FinitePrecision, storm::exceptions::NotSupportedException,
-                    "No exact numbers or parameters are supported in this build.");
-    processInputWithValueType<double>(symbolicInput, mpi);
-#endif
+    #ifdef STORM_HAVE_CARL
+        switch (mpi.verificationValueType) {
+            case ModelProcessingInformation::ValueType::Parametric:
+                processInputWithValueType<storm::RationalFunction>(symbolicInput, mpi);
+                break;
+            case ModelProcessingInformation::ValueType::Exact:
+                processInputWithValueType<storm::RationalNumber>(symbolicInput, mpi);
+                break;
+            case ModelProcessingInformation::ValueType::FinitePrecision:
+                processInputWithValueType<double>(symbolicInput, mpi);
+                break;
+        }
+    #else
+        STORM_LOG_THROW(mpi.verificationValueType == ModelProcessingInformation::ValueType::FinitePrecision, storm::exceptions::NotSupportedException,
+                        "No exact numbers or parameters are supported in this build.");
+        processInputWithValueType<double>(symbolicInput, mpi);
+    #endif
+    
 }
 
 void printTimeAndMemoryStatistics(uint64_t wallclockMilliseconds) {

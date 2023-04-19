@@ -318,9 +318,10 @@ bool ignoreTransitionAttribute(std::string const& name) {
 void GreatSpnEditorProjectParser::traverseTransitionElement(xercesc::DOMNode const* const node) {
     std::string transitionName;
     bool immediateTransition;
-    double rate = 1.0;      // The default rate in GreatSPN.
+    double rate = 1.0;      // The default rate in GreatSpn
     double weight = 1.0;    // The default weight in GreatSpn
     uint64_t priority = 1;  // The default priority in GreatSpn
+    std::string tag = "";   // The default tag (silent transition)
     boost::optional<uint64_t> numServers;
 
     // traverse attributes
@@ -355,6 +356,8 @@ void GreatSpnEditorProjectParser::traverseTransitionElement(xercesc::DOMNode con
             }
         } else if (ignoreTransitionAttribute(name)) {
             // ignore node
+        } else if (name.compare("superposition-tags") == 0) {
+            tag = storm::adapters::XMLtoString(attr->getNodeValue());
         } else {
             // Found node or attribute which is at the moment not handled by this parser.
             // Notify the user and continue the parsing.
@@ -363,9 +366,9 @@ void GreatSpnEditorProjectParser::traverseTransitionElement(xercesc::DOMNode con
     }
 
     if (immediateTransition) {
-        builder.addImmediateTransition(priority, weight, transitionName);
+        builder.addImmediateTransition(priority, weight, transitionName, tag);
     } else {
-        builder.addTimedTransition(0, rate, numServers, transitionName);
+        builder.addTimedTransition(0, rate, numServers, transitionName, tag);
     }
 
     // traverse children

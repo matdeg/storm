@@ -635,6 +635,11 @@ bool Model::hasAction(std::string const& name) const {
 
 uint64_t Model::getActionIndex(std::string const& name) const {
     auto it = actionToIndex.find(name);
+    if (it == actionToIndex.end()) {
+        std::string capName = name;
+        capName[0] = std::toupper(capName[0]);
+        it = actionToIndex.find(capName);
+    }
     STORM_LOG_THROW(it != actionToIndex.end(), storm::exceptions::InvalidOperationException, "Unable to retrieve index of unknown action '" << name << "'.");
     return it->second;
 }

@@ -1557,6 +1557,8 @@ storm::jani::Automaton JaniParser<ValueType>::parseAutomaton(Json const& automat
         std::string sourceLoc = getString<ValueType>(edgeEntry.at("location"), "source location for edge in automaton '" + name + "'");
         STORM_LOG_THROW(locIds.count(sourceLoc) == 1, storm::exceptions::InvalidJaniException,
                         "Source of edge has unknown location '" << sourceLoc << "' in automaton '" << name << "'.");
+        // comment
+        std::string edgeName = getString<ValueType>(edgeEntry.at("comment"), "edge name in edge from '" + sourceLoc + "' in automaton '" + name + "'");       
         // action
         STORM_LOG_THROW(edgeEntry.count("action") < 2, storm::exceptions::InvalidJaniException,
                         "Edge from " << sourceLoc << " in automaton " << name << " has multiple actions");
@@ -1682,7 +1684,7 @@ storm::jani::Automaton JaniParser<ValueType>::parseAutomaton(Json const& automat
         }
         automaton.addEdge(storm::jani::Edge(locIds.at(sourceLoc), parentModel.getActionIndex(action),
                                             rateExpr.isInitialized() ? boost::optional<storm::expressions::Expression>(rateExpr) : boost::none, templateEdge,
-                                            destinationLocationsAndProbabilities));
+                                            destinationLocationsAndProbabilities, edgeName));
     }
 
     return automaton;

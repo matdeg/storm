@@ -51,10 +51,17 @@ class GSPNExportSettings : public ModuleSettings {
      */
     std::string getWriteToJaniFilename() const;
 
+    /**
+     * Returns the name of the weight file for GSPN 
+     */
+    std::string getWriteToWeightFilename() const;
+
     /*!
      * Returns whether a set of standard properties is to be added when exporting to jani
      */
     bool isAddJaniPropertiesSet() const;
+
+    bool isForceNonDeterminism() const;
 
     bool isDisplayStatsSet() const;
 
@@ -68,6 +75,7 @@ class GSPNExportSettings : public ModuleSettings {
     static const std::string moduleName;
 
    private:
+    static const std::string forceNonDeterminismOptionName;
     static const std::string writeToDotOptionName;
     static const std::string writeToPnmlOptionName;
     static const std::string writeToPnproOptionName;

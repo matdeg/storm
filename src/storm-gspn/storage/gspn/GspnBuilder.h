@@ -34,7 +34,7 @@ class GspnBuilder {
      * @param priority The priority for the transtion.
      * @param weight The weight for the transition.
      */
-    uint_fast64_t addImmediateTransition(uint_fast64_t const& priority = 0, WeightType const& weight = 0, std::string const& name = "");
+    uint_fast64_t addImmediateTransition(uint_fast64_t const& priority = 0, WeightType const& weight = 0, std::string const& name = "", std::string const& tag = "");
 
     /**
      * Adds an timed transition to the gspn.
@@ -42,7 +42,7 @@ class GspnBuilder {
      * @param priority The priority for the transtion.
      * @param rate The rate for the transition.
      */
-    uint_fast64_t addTimedTransition(uint_fast64_t const& priority, RateType const& rate, std::string const& name = "");
+    uint_fast64_t addTimedTransition(uint_fast64_t const& priority, RateType const& rate, std::string const& name = "", std::string const& tag = "");
 
     /**
      * Adds an timed transition to the gspn.
@@ -51,7 +51,7 @@ class GspnBuilder {
      * @param numServers The number of servers this transition has (in case of K-Server semantics) or boost::none (in case of Infinite-Server-Semantics).
      */
     uint_fast64_t addTimedTransition(uint_fast64_t const& priority, RateType const& rate, boost::optional<uint64_t> const& numServers,
-                                     std::string const& name = "");
+                                     std::string const& name = "", std::string const& tag = "");
 
     void setTransitionLayoutInfo(uint64_t transitionId, LayoutInfo const& layoutInfo);
 

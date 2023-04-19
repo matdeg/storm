@@ -20,10 +20,10 @@ class Edge {
 
     Edge(uint64_t sourceLocationIndex, uint64_t actionIndex, boost::optional<storm::expressions::Expression> const& rate,
          std::shared_ptr<TemplateEdge> const& templateEdge,
-         std::vector<std::pair<uint64_t, storm::expressions::Expression>> const& destinationTargetLocationsAndProbabilities);
+         std::vector<std::pair<uint64_t, storm::expressions::Expression>> const& destinationTargetLocationsAndProbabilities, std::string name = "");
     Edge(uint64_t sourceLocationIndex, uint64_t actionIndex, boost::optional<storm::expressions::Expression> const& rate,
          std::shared_ptr<TemplateEdge> const& templateEdge, std::vector<uint64_t> const& destinationLocations,
-         std::vector<storm::expressions::Expression> const& destinationProbabilities);
+         std::vector<storm::expressions::Expression> const& destinationProbabilities, std::string name = "");
 
     /*!
      * Retrieves the index of the source location.
@@ -59,6 +59,26 @@ class Edge {
      * Sets a new rate for this edge.
      */
     void setRate(storm::expressions::Expression const& rate);
+
+     /*!
+     * Retrieves the name of this edge.
+     */
+    std::string const& getName() const;
+
+    /*!
+     * Sets a new name for this edge.
+     */
+    void setName(std::string const& name);
+
+    /*!
+     * Retrieves the mass of this edge.
+     */
+    double const& getMass() const;
+
+    /*!
+     * Sets a new mass for this edge.
+     */
+    void setMass(double const& mass);
 
     /*!
      * Retrieves the guard of this edge.
@@ -156,6 +176,12 @@ class Edge {
     void assertValid() const;
 
    private:
+    /// the mass of the edge 
+    double mass;
+
+    /// The name of the edge
+    std::string name;
+
     /// The index of the source location.
     uint64_t sourceLocationIndex;
 

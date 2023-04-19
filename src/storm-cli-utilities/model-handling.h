@@ -17,8 +17,10 @@
 
 #include <type_traits>
 
+#include "storm/storage/EventLog.h"
 #include "storm/storage/SymbolicModelDescription.h"
 #include "storm/storage/jani/Property.h"
+#include "storm/storage/jani/visitor/JSONExporter.h"
 
 #include "storm/builder/BuilderType.h"
 
@@ -48,6 +50,9 @@
 #include "storm/storage/jani/localeliminator/AutomaticAction.h"
 #include "storm/storage/jani/localeliminator/JaniLocalEliminator.h"
 
+#include "storm-parsers/parser/zzz/XesParser.h"
+#include "storm-parsers/parser/ExplicitTraceParser.h"
+
 #include "storm/utility/Stopwatch.h"
 
 namespace storm {
@@ -62,6 +67,9 @@ struct SymbolicInput {
 
     // The preprocessed properties to check (in case they needed amendment).
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
+
+    boost::optional<storm::storage::EventLog> eventLog;
+    
 };
 
 void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& ioSettings, SymbolicInput& input) {
@@ -87,6 +95,18 @@ void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& i
             if (ioSettings.isJaniPropertiesSet()) {
                 input.properties = std::move(janiInput.second);
             }
+            // We add masses to edges if deterministic
+            if (ioSettings.hasTracesSet()) {
+                std::string fname = ioSettings.getJaniInputFilename();
+                fname.erase(fname.end()-4,fname.end());
+                fname.append("json");
+                std::ifstream weightFile(fname);
+                storm::jani::ExportJsonType weights;
+                weightFile >> weights;
+                for (auto & edge : input.model->asJaniModel().getAutomata()[0].getEdges()) {
+                    edge.setMass(weights["transitions"][edge.getName()]["weight"]);
+                }
+            }
         }
         modelParsingWatch.stop();
         STORM_PRINT("Time for model input parsing: " << modelParsingWatch << ".\n\n");
@@ -105,6 +125,19 @@ void parseProperties(storm::settings::modules::IOSettings const& ioSettings, Sym
 
         input.properties.insert(input.properties.end(), newProperties.begin(), newProperties.end());
     }
+}
+
+storm::storage::EventLog parseTraces(storm::jani::Model const& model) {
+    std::string fname = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename();
+    storm::storage::EventLog eventLog;
+    if (fname.substr(fname.length()-3,3) == "xes") {
+        storm::parser::XesParser p(model);
+        eventLog = p.parseXesTraces(fname);
+    } else {
+        storm::parser::ExplicitTraceParser p(model);
+        eventLog = p.parseTraces(fname);
+    }
+    return eventLog;
 }
 
 SymbolicInput parseSymbolicInputQvbs(storm::settings::modules::IOSettings const& ioSettings) {
@@ -142,8 +175,11 @@ SymbolicInput parseSymbolicInput() {
         boost::optional<std::set<std::string>> propertyFilter = storm::api::parsePropertyFilter(ioSettings.getPropertyFilter());
 
         SymbolicInput input;
+
         parseSymbolicModelDescription(ioSettings, input);
+
         parseProperties(ioSettings, input, propertyFilter);
+
         return input;
     }
 }
@@ -391,7 +427,6 @@ std::pair<SymbolicInput, ModelProcessingInformation> preprocessSymbolicInput(Sym
             }
         }
     }
-
     if (output.model && output.model.get().isJaniModel()) {
         storm::jani::ModelFeatures supportedFeatures = storm::api::getSupportedJaniFeatures(storm::utility::getBuilderType(mpi.engine));
         storm::api::simplifyJaniModel(output.model.get().asJaniModel(), output.properties, supportedFeatures);
@@ -404,9 +439,35 @@ std::pair<SymbolicInput, ModelProcessingInformation> preprocessSymbolicInput(Sym
                                                                                             locationHeuristic, edgesHeuristic));
         }
     }
-
     return {output, mpi};
 }
+
+ModelProcessingInformation preprocessSymbolicInput2(SymbolicInput & input) {
+    
+    auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+
+    // Substitute constant definitions in symbolic input.
+    std::string constantDefinitionString = ioSettings.getConstantDefinitionString();
+    std::map<storm::expressions::Variable, storm::expressions::Expression> constantDefinitions;
+    if (input.model) {
+        constantDefinitions = input.model.get().parseConstantDefinitions(constantDefinitionString);
+        input.model = input.model.get().preprocess(constantDefinitions);
+    }
+    ensureNoUndefinedPropertyConstants(input.properties);
+    auto transformedJani = std::make_shared<SymbolicInput>();
+    ModelProcessingInformation mpi = getModelProcessingInformation(input, transformedJani);
+
+    // Check whether conversion for PRISM to JANI is requested or necessary.
+    
+    if (input.model && input.model.get().isJaniModel()) {
+        storm::jani::ModelFeatures supportedFeatures = storm::api::getSupportedJaniFeatures(storm::utility::getBuilderType(mpi.engine));
+        storm::api::simplifyJaniModel(input.model.get().asJaniModel(), input.properties, supportedFeatures);
+        const auto& buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
+    }
+    return mpi;
+}
+
+
 
 void exportSymbolicInput(SymbolicInput const& input) {
     auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
@@ -474,6 +535,7 @@ std::shared_ptr<storm::models::ModelBase> buildModelSparse(SymbolicInput const& 
     }
 
     return storm::api::buildSparseModel<ValueType>(input.model.get(), options);
+
 }
 
 template<typename ValueType>
@@ -1102,7 +1164,6 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
             task.setProduceSchedulers(true);
         }
         std::unique_ptr<storm::modelchecker::CheckResult> result = storm::api::verifyWithSparseEngine<ValueType>(mpi.env, sparseModel, task);
-
         std::unique_ptr<storm::modelchecker::CheckResult> filter;
         if (filterForInitialStates) {
             filter = std::make_unique<storm::modelchecker::ExplicitQualitativeCheckResult>(sparseModel->getInitialStates());
@@ -1261,9 +1322,17 @@ typename std::enable_if<DdType == storm::dd::DdType::CUDD && !std::is_same<Value
     STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "CUDD does not support the selected data-type.");
 }
 
+template<typename ValueType>
+void verifyWithSparseEngineTrace(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
+    auto sparseModel = model->as<storm::models::sparse::Model<ValueType>>();
+    storm::api::verifyWithSparseEngineTrace<ValueType>(mpi.env, sparseModel, input.eventLog.get());
+}
+
 template<storm::dd::DdType DdType, typename ValueType>
 void verifyModel(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
-    if (model->isSparseModel()) {
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        verifyWithSparseEngineTrace<ValueType>(model,input,mpi);
+    } else if (model->isSparseModel()) {
         verifyWithSparseEngine<ValueType>(model, input, mpi);
     } else {
         STORM_LOG_ASSERT(model->isSymbolicModel(), "Unexpected model type.");

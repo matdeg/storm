@@ -3,10 +3,15 @@
 #include <memory>
 
 #include "storm/logic/Formulas.h"
+#include "storm/storage/jani/visitor/JSONExporter.h"
+
+#include "storm-gspn/settings/modules/GSPNExportSettings.h"
+#include "storm/settings/SettingsManager.h"
 
 #include "storm/exceptions/InvalidModelException.h"
 namespace storm {
 namespace builder {
+
 
 storm::jani::Model* JaniGSPNBuilder::build(std::string const& automatonName) {
     storm::jani::ModelType modelType = storm::jani::ModelType::MA;
@@ -18,8 +23,15 @@ storm::jani::Model* JaniGSPNBuilder::build(std::string const& automatonName) {
     storm::jani::Model* model = new storm::jani::Model(gspn.getName(), modelType, janiVersion, expressionManager);
     storm::jani::Automaton mainAutomaton(automatonName, expressionManager->declareIntegerVariable("loc"));
     addVariables(model);
+    addActions(model);
     uint64_t locId = addLocation(mainAutomaton);
-    addEdges(mainAutomaton, locId);
+    auto exportSettings = storm::settings::getModule<storm::settings::modules::GSPNExportSettings>();
+    if (!exportSettings.isForceNonDeterminism()) {
+        addEdges(mainAutomaton, locId);
+    } else {
+        addLabeledEdges(model,mainAutomaton, locId);
+        buildWeightFile(model);
+    }
     model->addAutomaton(mainAutomaton);
     model->setStandardSystemComposition();
     model->getModelFeatures().add(storm::jani::ModelFeature::DerivedOperators);
@@ -46,10 +58,149 @@ void JaniGSPNBuilder::addVariables(storm::jani::Model* model) {
     }
 }
 
+void JaniGSPNBuilder::addActions(storm::jani::Model* model) {
+    for (auto const& trans : gspn.getImmediateTransitions()) {
+        storm::jani::Action act(trans.getTag());
+        if (!model->hasAction(trans.getTag())) {
+            model->addAction(act);
+        }
+    }
+    for (auto const& trans : gspn.getTimedTransitions()) {
+        storm::jani::Action act(trans.getTag());
+        if (!model->hasAction(trans.getTag())) {
+            model->addAction(act);
+        }
+    }
+}
+
 uint64_t JaniGSPNBuilder::addLocation(storm::jani::Automaton& automaton) {
     uint64_t janiLoc = automaton.addLocation(storm::jani::Location("loc"));
     automaton.addInitialLocation("loc");
     return janiLoc;
+}
+
+void JaniGSPNBuilder::buildWeightFile(storm::jani::Model* model) {
+    auto exportSettings = storm::settings::getModule<storm::settings::modules::GSPNExportSettings>();
+    storm::jani::ExportJsonType jsf;
+    storm::jani::VariableSet emptyVariableSet;
+    std::unordered_set<std::string> emptyUnorderedSet;
+
+    for (auto const& trans : gspn.getImmediateTransitions()) {
+        storm::jani::ExportJsonType jsonWeight = storm::jani::ExpressionToJson::translate(expressionManager->rational(trans.getWeight()),model->getConstants(),model->getGlobalVariables(),emptyVariableSet,emptyUnorderedSet);
+        jsf["transitions"][trans.getName()]["weight"] = jsonWeight;
+    }
+
+    std::ofstream o(exportSettings.getWriteToWeightFilename());
+    o << std::setw(4) << jsf << std::endl;
+}
+
+void JaniGSPNBuilder::addLabeledEdges(storm::jani::Model* model, storm::jani::Automaton& automaton, uint64_t locId) {
+
+    for (auto const& trans : gspn.getImmediateTransitions()) {
+        if (trans.noWeightAttached()) {
+            std::cout << "ERROR -- no weights attached at transition\n";
+            continue;
+        }
+        storm::expressions::Expression guard = expressionManager->boolean(true);
+        storm::expressions::Expression destguard = expressionManager->boolean(true);
+        storm::expressions::Expression weight = expressionManager->rational(0.0);
+        std::vector<storm::expressions::Expression> probabilities;
+        std::vector<uint64_t> destinationLocations;
+        std::vector<storm::jani::Assignment> assignments;
+
+        for (auto const& inPlaceEntry : trans.getInputPlaces()) {
+            destguard = destguard && (vars[inPlaceEntry.first]->getExpressionVariable() >= inPlaceEntry.second);
+            if (trans.getOutputPlaces().count(inPlaceEntry.first) == 0) {
+                assignments.emplace_back(storm::jani::LValue(*vars[inPlaceEntry.first]),
+                                            (vars[inPlaceEntry.first])->getExpressionVariable() - inPlaceEntry.second);
+            }
+        }
+        for (auto const& inhibPlaceEntry : trans.getInhibitionPlaces()) {
+            destguard = destguard && (vars[inhibPlaceEntry.first]->getExpressionVariable() < inhibPlaceEntry.second);
+        }
+        for (auto const& outputPlaceEntry : trans.getOutputPlaces()) {
+            if (trans.getInputPlaces().count(outputPlaceEntry.first) == 0) {
+                assignments.emplace_back(storm::jani::LValue(*vars[outputPlaceEntry.first]),
+                                            (vars[outputPlaceEntry.first])->getExpressionVariable() + outputPlaceEntry.second);
+            } else {
+                assignments.emplace_back(
+                    storm::jani::LValue(*vars[outputPlaceEntry.first]),
+                    (vars[outputPlaceEntry.first])->getExpressionVariable() + outputPlaceEntry.second - trans.getInputPlaces().at(outputPlaceEntry.first));
+            }
+        }
+        destguard = destguard.simplify();
+        guard = guard || destguard;
+
+        destinationLocations.emplace_back(locId);
+        probabilities.emplace_back(expressionManager->rational(1.0));
+
+        std::shared_ptr<storm::jani::TemplateEdge> templateEdge = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
+        automaton.registerTemplateEdge(templateEdge);
+        templateEdge->addDestination(storm::jani::TemplateEdgeDestination(assignments));
+        storm::jani::Edge e(locId, model->getActionIndex(trans.getTag()), boost::none, templateEdge, destinationLocations, probabilities, trans.getName());
+        e.setGuard(destguard);
+        automaton.addEdge(e);
+    }
+
+
+    for (auto const& trans : gspn.getTimedTransitions()) {
+        if (storm::utility::isZero(trans.getRate())) {
+            STORM_LOG_WARN("Transitions with rate zero are not allowed in JANI. Skipping this transition");
+            continue;
+        }
+        storm::expressions::Expression guard = expressionManager->boolean(true);
+
+        std::vector<storm::jani::Assignment> assignments;
+        for (auto const& inPlaceEntry : trans.getInputPlaces()) {
+            guard = guard && (vars[inPlaceEntry.first]->getExpressionVariable() >= inPlaceEntry.second);
+            if (trans.getOutputPlaces().count(inPlaceEntry.first) == 0) {
+                assignments.emplace_back(storm::jani::LValue(*vars[inPlaceEntry.first]),
+                                         (vars[inPlaceEntry.first])->getExpressionVariable() - inPlaceEntry.second);
+            }
+        }
+        for (auto const& inhibPlaceEntry : trans.getInhibitionPlaces()) {
+            guard = guard && (vars[inhibPlaceEntry.first]->getExpressionVariable() < inhibPlaceEntry.second);
+        }
+        for (auto const& outputPlaceEntry : trans.getOutputPlaces()) {
+            if (trans.getInputPlaces().count(outputPlaceEntry.first) == 0) {
+                assignments.emplace_back(storm::jani::LValue(*vars[outputPlaceEntry.first]),
+                                         (vars[outputPlaceEntry.first])->getExpressionVariable() + outputPlaceEntry.second);
+            } else {
+                assignments.emplace_back(
+                    storm::jani::LValue(*vars[outputPlaceEntry.first]),
+                    (vars[outputPlaceEntry.first])->getExpressionVariable() + outputPlaceEntry.second - trans.getInputPlaces().at(outputPlaceEntry.first));
+            }
+        }
+
+        std::shared_ptr<storm::jani::TemplateEdge> templateEdge = std::make_shared<storm::jani::TemplateEdge>(guard.simplify());
+        automaton.registerTemplateEdge(templateEdge);
+
+        storm::expressions::Expression rate = expressionManager->rational(trans.getRate());
+        if (trans.hasInfiniteServerSemantics() || (trans.hasKServerSemantics() && !trans.hasSingleServerSemantics())) {
+            STORM_LOG_THROW(trans.hasKServerSemantics() || !trans.getInputPlaces().empty(), storm::exceptions::InvalidModelException,
+                            "Unclear semantics: Found a transition with infinite-server semantics and without input place.");
+            storm::expressions::Expression enablingDegree;
+            bool firstArgumentOfMinExpression = true;
+            if (trans.hasKServerSemantics()) {
+                enablingDegree = expressionManager->integer(trans.getNumberOfServers());
+                firstArgumentOfMinExpression = false;
+            }
+            for (auto const& inPlaceEntry : trans.getInputPlaces()) {
+                storm::expressions::Expression enablingDegreeInPlace =
+                    vars[inPlaceEntry.first]->getExpressionVariable() / expressionManager->integer(inPlaceEntry.second);  // Integer division!
+                if (firstArgumentOfMinExpression == true) {
+                    enablingDegree = enablingDegreeInPlace;
+                    firstArgumentOfMinExpression = false;
+                } else {
+                    enablingDegree = storm::expressions::minimum(enablingDegree, enablingDegreeInPlace);
+                }
+            }
+            rate = rate * enablingDegree;
+        }
+        templateEdge->addDestination(assignments);
+        storm::jani::Edge e(locId, model->getActionIndex(trans.getTag()), rate, templateEdge, {locId}, {expressionManager->integer(1)},trans.getName());
+        automaton.addEdge(e);
+    }
 }
 
 void JaniGSPNBuilder::addEdges(storm::jani::Automaton& automaton, uint64_t locId) {

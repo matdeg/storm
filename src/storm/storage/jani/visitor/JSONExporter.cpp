@@ -1085,6 +1085,7 @@ ExportJsonType buildEdge(Edge const& edge, std::map<uint64_t, std::string> const
     if (!edge.getAssignments().empty()) {
         edgeEntry["assignments"] = buildAssignmentArray(edge.getAssignments(), constants, globalVariables, localVariables, commentExpressions);
     }
+    edgeEntry["comment"] = edge.getName();
     return edgeEntry;
 }
 
