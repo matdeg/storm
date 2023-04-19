@@ -1,6 +1,8 @@
 #include "storm/storage/sparse/PrismChoiceOrigins.h"
 #include "storm/storage/sparse/JaniChoiceOrigins.h"
 
+#include "storm/adapters/JsonAdapter.h"
+
 #include "storm/utility/macros.h"
 #include "storm/utility/vector.h"
 
