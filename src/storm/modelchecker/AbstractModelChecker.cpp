@@ -65,7 +65,7 @@ template<typename ModelType>
 std::unique_ptr<CheckResult> AbstractModelChecker<ModelType>::computeProbabilities(Environment const& env,
                                                                                    CheckTask<storm::logic::Formula, ValueType> const& checkTask) {
     storm::logic::Formula const& formula = checkTask.getFormula();
-    
+
     if (formula.isStateFormula() || formula.hasQualitativeResult()) {
         return this->computeStateFormulaProbabilities(env, checkTask.substituteFormula(formula));
     }

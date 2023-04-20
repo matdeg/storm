@@ -346,7 +346,7 @@ SparseMatrix<ValueType> SparseMatrixBuilder<ValueType>::build(index_type overrid
             rowGroupIndices.get().push_back(rowCount);
         }
     }
-    
+
     return SparseMatrix<ValueType>(columnCount, std::move(rowIndications), std::move(columnsAndValues), std::move(rowGroupIndices));
 }
 

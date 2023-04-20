@@ -670,7 +670,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         }
     } else {
         allChoices = getActionChoices(locations, *this->state, stateToIdCallback);
-    }      
+    }
     std::size_t totalNumberOfChoices = allChoices.size();
 
     // If there is not a single choice, we return immediately, because the state has no behavior (other than
@@ -724,14 +724,14 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         allChoices.clear();
         allChoices.push_back(std::move(globalChoice));
     }
- 
+
     // Move all remaining choices in place.
     for (auto& choice : allChoices) {
         result.addChoice(std::move(choice));
     }
 
     this->postprocess(result);
-    
+
     return result;
 }
 
@@ -739,7 +739,7 @@ template<typename ValueType, typename StateType>
 Choice<ValueType> JaniNextStateGenerator<ValueType, StateType>::expandNonSynchronizingEdge(storm::jani::Edge const& edge, uint64_t outputActionIndex,
                                                                                            uint64_t automatonIndex, CompressedState const& state,
                                                                                            StateToIdCallback stateToIdCallback) {
-    // Determine the exit rate if it's a Markovian edge. 
+    // Determine the exit rate if it's a Markovian edge.
     boost::optional<ValueType> exitRate = boost::none;
     if (edge.hasRate()) {
         exitRate = this->evaluator->asRational(edge.getRate());
@@ -1172,7 +1172,7 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
             }
         }
     }
-    
+
     return result;
 }
 

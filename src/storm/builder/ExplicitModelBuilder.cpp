@@ -85,7 +85,7 @@ ExplicitModelBuilder<ValueType, RewardModelType, StateType>::ExplicitModelBuilde
 template<typename ValueType, typename RewardModelType, typename StateType>
 std::shared_ptr<storm::models::sparse::Model<ValueType, RewardModelType>> ExplicitModelBuilder<ValueType, RewardModelType, StateType>::build() {
     STORM_LOG_DEBUG("Exploration order is: " << options.explorationOrder);
-    
+
     switch (generator->getModelType()) {
         case storm::generator::ModelType::DTMC:
             return storm::utility::builder::buildModelFromComponents(storm::models::ModelType::Dtmc, buildModelComponents());
@@ -306,14 +306,14 @@ void ExplicitModelBuilder<ValueType, RewardModelType, StateType>::buildMatrices(
                 timeOfLastMessage = std::chrono::high_resolution_clock::now();
                 numberOfExploredStatesSinceLastMessage = 0;
             }
-        } 
+        }
 
         if (storm::utility::resources::isTerminate()) {
             auto durationSinceStart = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - timeOfStart).count();
             std::cout << "Explored " << numberOfExploredStates << " states in " << durationSinceStart << " seconds before abort.\n";
             STORM_LOG_THROW(false, storm::exceptions::AbortException, "Aborted in state space exploration.");
             break;
-        } 
+        }
     }
 
     // If the exploration order was not breadth-first, we need to fix the entries in the matrix according to
@@ -342,7 +342,7 @@ void ExplicitModelBuilder<ValueType, RewardModelType, StateType>::buildMatrices(
         this->stateStorage.stateToId.remap([&remapping](StateType const& state) { return remapping[state]; });
 
         this->generator->remapStateIds([&remapping](StateType const& state) { return remapping[state]; });
-    } 
+    }
 }
 
 template<typename ValueType, typename RewardModelType, typename StateType>
@@ -412,7 +412,7 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
         if (generator->getOptions().isBuildObservationValuationsSet()) {
             modelComponents.observationValuations = generator->makeObservationValuation();
         }
-    } 
+    }
     return modelComponents;
 }
 

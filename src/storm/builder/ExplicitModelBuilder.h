@@ -132,7 +132,7 @@ class ExplicitModelBuilder {
      * @return A pair indicating whether the state was already discovered before and the state id of the state.
      */
     StateType getOrAddStateIndex(CompressedState const& state);
-    
+
     /*!
      * Builds the transition matrix and the transition reward matrix based for the given program.
      *
