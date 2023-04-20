@@ -19,7 +19,6 @@
 #include "storm/modelchecker/prctl/SymbolicMdpPrctlModelChecker.h"
 #include "storm/modelchecker/reachability/SparseDtmcEliminationModelChecker.h"
 #include "storm/modelchecker/rpatl/SparseSmgRpatlModelChecker.h"
-
 #include "storm/modelchecker/trace/TraceMdpModelChecker.h"
 
 #include "storm/storage/EventLog.h"
@@ -238,7 +237,6 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
     return verifyWithSparseEngine(env, ctmc, task);
 }
 
-
 template<typename ValueType>
 typename std::enable_if<!std::is_same<ValueType, storm::RationalFunction>::value, std::unique_ptr<storm::modelchecker::CheckResult>>::type
 verifyWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
@@ -358,11 +356,11 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
 }
 
 template<typename ValueType>
-void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
+void verifyTraceWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
                        storm::storage::EventLog const& eventLog) {
-    
+
     if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {
-        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "rational function are not supported yet");
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "rational function are not supported by the sparse engine (trace)");
     } else {
         storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
         for (uint_fast64_t i = 0; i < eventLog.size(); i++) {
@@ -372,14 +370,14 @@ void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<
 }
 
 template<typename ValueType>
-void verifyWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
+void verifyTraceWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
                        storm::storage::EventLog const& eventLog) {
     if (model->getType() == storm::models::ModelType::Mdp) {
         verifyWithSparseEngineTrace(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported by the sparse engine (trace)");
     }
 }
-
-
 
 template<typename ValueType>
 std::unique_ptr<storm::modelchecker::CheckResult> computeSteadyStateDistributionWithSparseEngine(

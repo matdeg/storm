@@ -9,7 +9,6 @@
 #include "storm/storage/jani/eliminator/ArrayEliminator.h"
 
 namespace storm {
-
 namespace jani {
 class Edge;
 class EdgeDestination;

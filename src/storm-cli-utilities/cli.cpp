@@ -3,7 +3,6 @@
 #include "storm-cli-utilities/resources.h"
 #include "storm-version-info/storm-version.h"
 #include "storm/io/file.h"
-#include "storm/storage/Trace.h"
 #include "storm/storage/EventLog.h"
 #include "storm/utility/SignalHandler.h"
 #include "storm/utility/Stopwatch.h"
@@ -253,10 +252,6 @@ void processOptions() {
     // Parse symbolic input (PRISM, JANI, properties, etc.)
     SymbolicInput symbolicInput = parseSymbolicInput();
 
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        symbolicInput.eventLog = parseTraces(symbolicInput.model->asJaniModel());
-    }
-
     // Obtain settings for model processing
     ModelProcessingInformation mpi;
 
@@ -287,7 +282,6 @@ void processOptions() {
                         "No exact numbers or parameters are supported in this build.");
         processInputWithValueType<double>(symbolicInput, mpi);
     #endif
-    
 }
 
 void printTimeAndMemoryStatistics(uint64_t wallclockMilliseconds) {

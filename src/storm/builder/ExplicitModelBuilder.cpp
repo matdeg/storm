@@ -136,93 +136,6 @@ ExplicitStateLookup<StateType> ExplicitModelBuilder<ValueType, RewardModelType, 
     return ExplicitStateLookup<StateType>(this->generator->getVariableInformation(), this->stateStorage.stateToId);
 }
 
-
-
-
-template<typename ValueType, typename RewardModelType, typename StateType>
-void ExplicitModelBuilder<ValueType, RewardModelType, StateType>::buildMatricesTrace(
-    std::vector<uint_fast64_t> const& trace,
-    storm::storage::SparseMatrix<ValueType>& transitionMatrix,
-    storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilder,
-    storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilderTrace,
-    std::vector<RewardModelBuilder<typename RewardModelType::ValueType>>& rewardModelBuilders,
-    StateAndChoiceInformationBuilder& stateAndChoiceInformationBuilder) {
-
-    std::deque<std::pair<StateType,uint_fast64_t>> statesToExploreTrace;
-    for (StateType a : this->stateStorage.initialStateIndices) {
-        std::pair<StateType,uint_fast64_t> k (a,0);
-        statesToExploreTrace.emplace_back(k);
-    }
-    auto data = stateAndChoiceInformationBuilder.buildDataOfChoiceOrigins(transitionMatrix.getRowCount());
-
-    // Now explore the current state until there is no more reachable state.
-    uint_fast64_t currentRowGroup = 0;
-    uint_fast64_t currentRow = 0;
-    uint_fast64_t indexIncrement = 0;
-
-    auto timeOfStart = std::chrono::high_resolution_clock::now();
-    auto timeOfLastMessage = std::chrono::high_resolution_clock::now();
-    uint64_t numberOfExploredStates = 0;
-    uint64_t numberOfExploredStatesSinceLastMessage = 0;
-
-    uint_fast64_t sinkIndex = transitionMatrix.getRowCount();
-    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,0),0}};
-    
-    // Perform a search through the model.
-    while (!statesToExploreTrace.empty()) {
-        // Get the first state in the queue.
-        uint_fast64_t depth = statesToExploreTrace.front().second;
-        StateType currentIndex = statesToExploreTrace.front().first;
-        statesToExploreTrace.pop_front();
-        
-        
-        bool deadl = false;
-        for (auto a : this->stateStorage.deadlockStateIndices) {
-            if (a == currentIndex) {
-                deadl = true;
-            }
-        }
-        auto deadlStates = this->stateStorage.deadlockStateIndices;
-        transitionMatrixBuilderTrace.newRowGroup(currentRowGroup);
-
-        if(!deadl && !(currentIndex == sinkIndex)) {
-            uint_fast64_t i = 0;
-            auto currentEdgeIndexSet = boost::any_cast<std::vector<uint_fast64_t>>(std::move(data[currentIndex]));
-            for (auto b : transitionMatrix.getRow(currentIndex)) {
-                auto a = b.getColumnValuePair();
-                auto nextStateIndex = a.first;
-                auto proba = a.second;
-                uint_fast64_t actionIndex = currentEdgeIndexSet[i];
-                std::pair<StateType,uint_fast64_t> nextCouple;
-                if (actionIndex == 0) {
-                    nextCouple = std::make_pair(nextStateIndex,depth);
-                } else if (actionIndex == trace[depth]) {
-                    nextCouple = std::make_pair(nextStateIndex,depth + 1);
-                } else {
-                    nextCouple = std::make_pair(sinkIndex,0);
-                }
-                if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
-                    statesToExploreTrace.emplace_back(nextCouple);
-                    coupleToIndex[nextCouple] = ++indexIncrement;
-                }
-                transitionMatrixBuilderTrace.addNextValue(currentRow, coupleToIndex[nextCouple],proba);
-                i++;
-            }
-        } else {
-            transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
-        }
-        currentRow++;
-        currentRowGroup++;
-    }
-    for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
-        std::cout << "(" << it->first.first << "," << it->first.second << ") -> " << it->second << "\n"; 
-    }
-}
-
-
-
-
-
 template<typename ValueType, typename RewardModelType, typename StateType>
 void ExplicitModelBuilder<ValueType, RewardModelType, StateType>::buildMatrices(
     storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilder,
@@ -438,7 +351,6 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
     // one choice per state.
     bool deterministicModel = generator->isDeterministicModel();
 
-
     // Prepare the component builders
     storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, !deterministicModel, 0);
     std::vector<RewardModelBuilder<typename RewardModelType::ValueType>> rewardModelBuilders;
@@ -452,15 +364,15 @@ storm::storage::sparse::ModelComponents<ValueType, RewardModelType> ExplicitMode
     stateAndChoiceInformationBuilder.setBuildMarkovianStates(generator->getModelType() == storm::generator::ModelType::MA);
     stateAndChoiceInformationBuilder.setBuildStateValuations(generator->getOptions().isBuildStateValuationsSet());
 
-
     buildMatrices(transitionMatrixBuilder, rewardModelBuilders, stateAndChoiceInformationBuilder);
+
     // Initialize the model components with the obtained information.
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
         transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount()), buildStateLabeling(),
         std::unordered_map<std::string, RewardModelType>(), !generator->isDiscreteTimeModel());
+
     uint_fast64_t numStates = modelComponents.transitionMatrix.getColumnCount();
     uint_fast64_t numChoices = modelComponents.transitionMatrix.getRowCount();
-
 
     // Now finalize all reward models.
     for (auto& rewardModelBuilder : rewardModelBuilders) {

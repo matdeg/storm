@@ -70,9 +70,6 @@ class ExplicitStateLookup {
 template<typename ValueType, typename RewardModelType = storm::models::sparse::StandardRewardModel<ValueType>, typename StateType = uint32_t>
 class ExplicitModelBuilder {
    public:
-
-    typedef storm::storage::FlatSet<uint_fast64_t> EdgeIndexSet;
-
     struct Options {
         /*!
          * Creates an object representing the default building options.
@@ -135,20 +132,6 @@ class ExplicitModelBuilder {
      * @return A pair indicating whether the state was already discovered before and the state id of the state.
      */
     StateType getOrAddStateIndex(CompressedState const& state);
-
-    /*!
-     * Builds the transition matrix and the transition reward matrix based for the given program.
-     *
-     * @param transitionMatrixBuilder The builder of the transition matrix.
-     * @param rewardModelBuilders The builders for the selected reward models.
-     * @param stateAndChoiceInformationBuilder The builder for the requested information of the individual states and choices
-     */
-    void buildMatricesTrace(std::vector<uint_fast64_t> const& trace,
-                       storm::storage::SparseMatrix<ValueType>& transitionMatrix, 
-                       storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilder,
-                       storm::storage::SparseMatrixBuilder<ValueType>& transitionMatrixBuilderTrace,
-                       std::vector<RewardModelBuilder<typename RewardModelType::ValueType>>& rewardModelBuilders,
-                       StateAndChoiceInformationBuilder& stateAndChoiceInformationBuilder);
     
     /*!
      * Builds the transition matrix and the transition reward matrix based for the given program.

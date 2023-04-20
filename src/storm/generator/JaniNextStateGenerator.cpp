@@ -6,6 +6,9 @@
 
 #include "storm/models/sparse/StateLabeling.h"
 
+#include "storm/settings/SettingsManager.h"
+#include "storm/settings/modules/IOSettings.h"
+
 #include "storm/solver/SmtSolver.h"
 #include "storm/storage/expressions/SimpleValuation.h"
 
@@ -25,12 +28,7 @@
 
 #include "storm/storage/sparse/JaniChoiceOrigins.h"
 
-
-#include "storm/settings/SettingsManager.h"
-#include "storm/settings/modules/IOSettings.h"
-
 #include "storm/generator/Distribution.h"
-
 
 #include "storm/exceptions/InvalidArgumentException.h"
 #include "storm/exceptions/NotSupportedException.h"
@@ -652,7 +650,6 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
             if (this->evaluator->asBool(expressionBool.first) == expressionBool.second) {
                 // Set back transient variables to default values so we are ready to process the next state
                 this->transientVariableInformation.setDefaultValuesInEvaluator(*this->evaluator);
-                result.setExpanded();
                 return result;
             }
         }
@@ -673,8 +670,7 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
         }
     } else {
         allChoices = getActionChoices(locations, *this->state, stateToIdCallback);
-    }  
-    
+    }      
     std::size_t totalNumberOfChoices = allChoices.size();
 
     // If there is not a single choice, we return immediately, because the state has no behavior (other than
@@ -733,7 +729,9 @@ StateBehavior<ValueType, StateType> JaniNextStateGenerator<ValueType, StateType>
     for (auto& choice : allChoices) {
         result.addChoice(std::move(choice));
     }
+
     this->postprocess(result);
+    
     return result;
 }
 
@@ -1033,7 +1031,6 @@ void JaniNextStateGenerator<ValueType, StateType>::expandSynchronizingEdgeCombin
         }
 
         done = !movedIterator;
-        
     }
 }
 
@@ -1042,6 +1039,7 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                                                                                               CompressedState const& state, StateToIdCallback stateToIdCallback,
                                                                                               EdgeFilter const& edgeFilter) {
     std::vector<Choice<ValueType>> result;
+
     // To avoid reallocations, we declare some memory here here.
     // This vector will store for each automaton the set of edges with the current output and the current source location
     std::vector<EdgeSetWithIndices const*> edgeSetsMemory;
@@ -1049,10 +1047,10 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
     std::vector<typename EdgeSetWithIndices::const_iterator> edgeIteratorMemory;
 
     for (OutputAndEdges const& outputAndEdges : edges) {
-        AutomataAndEdges const& edges = outputAndEdges.second;
+        auto const& edges = outputAndEdges.second;
         if (edges.size() == 1) {
             // If the synch consists of just one element, it's non-synchronizing.
-            std::pair<uint64_t, LocationsAndEdges> const& nonsychingEdges = edges.front();
+            auto const& nonsychingEdges = edges.front();
             uint64_t automatonIndex = nonsychingEdges.first;
 
             auto edgesIt = nonsychingEdges.second.find(locations[automatonIndex]);
@@ -1079,7 +1077,6 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
                 }
             }
         } else {
-            
             // If the element has more than one set of edges, we need to perform a synchronization.
             STORM_LOG_ASSERT(outputAndEdges.first, "Need output action index for synchronization.");
 
@@ -1175,6 +1172,7 @@ std::vector<Choice<ValueType>> JaniNextStateGenerator<ValueType, StateType>::get
             }
         }
     }
+    
     return result;
 }
 

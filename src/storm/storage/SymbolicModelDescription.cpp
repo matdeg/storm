@@ -4,7 +4,6 @@
 #include "storm/utility/jani.h"
 #include "storm/utility/prism.h"
 
-#include "storm/utility/Stopwatch.h"
 #include "storm/storage/jani/Automaton.h"
 #include "storm/storage/jani/Model.h"
 #include "storm/storage/jani/Property.h"
@@ -167,7 +166,6 @@ SymbolicModelDescription SymbolicModelDescription::preprocess(std::string const&
 
 SymbolicModelDescription SymbolicModelDescription::preprocess(
     std::map<storm::expressions::Variable, storm::expressions::Expression> const& constantDefinitions) const {
-    storm::utility::Stopwatch watch(true);
     if (this->isJaniModel()) {
         storm::jani::Model preparedModel = this->asJaniModel().defineUndefinedConstants(constantDefinitions).substituteConstantsFunctions();
         return SymbolicModelDescription(preparedModel);
