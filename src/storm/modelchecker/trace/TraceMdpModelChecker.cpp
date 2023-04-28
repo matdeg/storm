@@ -48,7 +48,7 @@ TraceMdpModelChecker<SparseMdpModelType>::TraceMdpModelChecker(SparseMdpModelTyp
 }
 
 template<typename SparseMdpModelType>
-std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check2(Environment const& env, std::vector<uint_fast64_t> const trace) {
+std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check(Environment const& env, std::vector<uint_fast64_t> const trace) {
 
 
     storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);

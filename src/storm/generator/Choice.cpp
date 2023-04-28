@@ -190,6 +190,16 @@ void Choice<ValueType, StateType>::reserve(std::size_t const& size) {
     distribution.reserve(size);
 }
 
+template<typename ValueType, typename StateType>
+std::ostream& operator<<(std::ostream& out, Choice<ValueType, StateType> const& choice) {
+    out << "<";
+    for (auto const& stateProbabilityPair : choice) {
+        out << stateProbabilityPair.first << " : " << stateProbabilityPair.second << ", ";
+    }
+    out << ">";
+    return out;
+}
+
 template struct Choice<double>;
 
 #ifdef STORM_HAVE_CARL

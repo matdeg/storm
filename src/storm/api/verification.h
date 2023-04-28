@@ -364,16 +364,17 @@ void verifyTraceWithSparseEngine(storm::Environment const& env, std::shared_ptr<
     } else {
         storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
         for (uint_fast64_t i = 0; i < eventLog.size(); i++) {
-            std::cout << *modelchecker.check2(env,eventLog.getTrace(i).get()) << "\n";
+            auto result = modelchecker.check(env,eventLog.getTrace(i).get());
+            std::cout << "Result (for trace n°" << i << " ) : " << *result << "\n";
         }
     }
 }
 
 template<typename ValueType>
-void verifyTraceWithSparseEngineTrace(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
+void verifyTraceWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
                        storm::storage::EventLog const& eventLog) {
     if (model->getType() == storm::models::ModelType::Mdp) {
-        verifyWithSparseEngineTrace(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog);
+        verifyTraceWithSparseEngine(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog);
     } else {
         STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported by the sparse engine (trace)");
     }

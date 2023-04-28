@@ -4,7 +4,7 @@
 #include <vector>
 #include "storm/models/sparse/ChoiceLabeling.h"
 #include "storm/storage/BitVector.h"
-
+#include <boost/container/flat_set.hpp>
 #include "storm/adapters/JsonForward.h"
 #include "storm/adapters/RationalNumberAdapter.h"
 

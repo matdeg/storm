@@ -20,7 +20,7 @@ class TraceMdpModelChecker : public SparsePropositionalModelChecker<SparseMdpMod
 
     explicit TraceMdpModelChecker(SparseMdpModelType const& model);
 
-    std::unique_ptr<CheckResult> check2(Environment const& env, std::vector<uint_fast64_t> const trace);
+    std::unique_ptr<CheckResult> check(Environment const& env, std::vector<uint_fast64_t> const trace);
 
 };
 }  // namespace modelchecker

@@ -1298,15 +1298,15 @@ typename std::enable_if<DdType == storm::dd::DdType::CUDD && !std::is_same<Value
 }
 
 template<typename ValueType>
-void verifyWithSparseEngineTrace(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
+void verifyTraceWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
     auto sparseModel = model->as<storm::models::sparse::Model<ValueType>>();
-    storm::api::verifyWithSparseEngineTrace<ValueType>(mpi.env, sparseModel, input.eventLog.get());
+    storm::api::verifyTraceWithSparseEngine<ValueType>(mpi.env, sparseModel, input.eventLog.get());
 }
 
 template<storm::dd::DdType DdType, typename ValueType>
 void verifyModel(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
     if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        verifyWithSparseEngineTrace<ValueType>(model,input,mpi);
+        verifyTraceWithSparseEngine<ValueType>(model,input,mpi);
     } else if (model->isSparseModel()) {
         verifyWithSparseEngine<ValueType>(model, input, mpi);
     } else {

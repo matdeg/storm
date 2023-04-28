@@ -213,19 +213,7 @@ struct Choice {
 };
 
 template<typename ValueType, typename StateType>
-std::ostream& operator<<(std::ostream& out, Choice<ValueType, StateType> const& choice) {
-    bool first = true;
-    for (auto const& stateProbabilityPair : choice) {
-        if (first) {
-            out << "<" << stateProbabilityPair.first << " : " << stateProbabilityPair.second;
-            first = false
-        } else {
-            out << ", " << stateProbabilityPair.first << " : " << stateProbabilityPair.second;
-        }
-    }
-    out << ">";
-    return out;
-}
+std::ostream& operator<<(std::ostream& out, Choice<ValueType, StateType> const& choice);
 
 }  // namespace generator
 }  // namespace storm
