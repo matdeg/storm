@@ -16,9 +16,10 @@ class EventLog {
     std::vector<storm::storage::Trace> getTraces();
 
     uint_fast64_t size() const;
-
+    uint_fast64_t getInvalidTracesSize() const;
    private:
     std::vector<storm::storage::Trace> traces; 
+    uint_fast64_t invalidTracesSize = 0;
 };
 
 }  // namespace storage

@@ -24,6 +24,14 @@ uint_fast64_t Trace::size() {
     return get().size();
 }
 
+void Trace::setValid(bool valid) {
+    isValid = valid;
+}
+
+bool Trace::getValid() const {
+    return this->isValid;
+}
+
 std::ostream& operator<< (std::ostream& os, Trace ttrace) {
     std::vector<uint_fast64_t> trace = ttrace.get();
     for(uint_fast64_t j : trace) {

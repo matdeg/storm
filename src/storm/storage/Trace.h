@@ -16,10 +16,13 @@ class Trace {
 
     uint_fast64_t getID();
     uint_fast64_t size();
+    void setValid(bool valid);
+    bool getValid() const;
 
    private:
     std::vector<uint_fast64_t> trace; 
     uint_fast64_t id;
+    bool isValid = false;
 };
 
 std::ostream& operator<<(std::ostream& out, Trace trace);

@@ -68,7 +68,7 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check(Env
     /* for (auto k : deadlocks) {
             std::cout << "deadl : " << k << "\n";
         } */
-    
+
     std::vector<uint_fast64_t> edgeToAction = data->edgeIndexToActionIndex();
 
     // Now explore the current state until there is no more reachable state.
@@ -85,7 +85,6 @@ std::unique_ptr<CheckResult> TraceMdpModelChecker<SparseMdpModelType>::check(Env
     uint_fast64_t sinkIndex = transitionMatrix.getRowCount();
     std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,0),0}};
 
-    
     // Perform a search through the model.
     while (!statesToExploreTrace.empty()) {
         // Get the first state in the queue.

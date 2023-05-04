@@ -107,7 +107,7 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
     bool isValidTrace = true;
     uint_fast64_t i = 0;
     // traverse children
-    while (isValidTrace && i < node->getChildNodes()->getLength()) {
+    while (i < node->getChildNodes()->getLength()) {
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("event") == 0) {
@@ -123,8 +123,9 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
         i++;
     }
     if (isValidTrace) {
-        eventLog.addTrace(trace);
+        trace.setValid(true);
     }
+    eventLog.addTrace(trace);
     traceID++;
 }
 

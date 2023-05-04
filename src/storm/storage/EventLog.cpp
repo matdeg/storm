@@ -10,6 +10,9 @@ namespace storage {
 
 void EventLog::addTrace(storm::storage::Trace trace) {
     this->traces.emplace_back(trace);
+    if (!trace.getValid()) {
+        invalidTracesSize++;
+    }
 }
 
 storm::storage::Trace EventLog::getTrace(uint_fast64_t k) const {
@@ -24,6 +27,9 @@ uint_fast64_t EventLog::size() const {
     return traces.size();
 }
 
+uint_fast64_t EventLog::getInvalidTracesSize() const {
+    return this->invalidTracesSize;
+}
 
 }  // namespace storage
 }  // namespace storm
