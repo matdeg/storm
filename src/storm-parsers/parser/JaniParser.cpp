@@ -676,6 +676,7 @@ storm::jani::Property JaniParser<ValueType>::parseProperty(storm::jani::Model& m
     if (propertyStructure.count("comment") > 0) {
         comment = getString<ValueType>(propertyStructure.at("comment"), "comment for property named '" + name + "'.");
     }
+    std::cout << "MAYBE HERE2\n";
     STORM_LOG_THROW(propertyStructure.count("expression") == 1, storm::exceptions::InvalidJaniException, "Property must have an expression");
     // Parse filter expression.
     Json const& expressionStructure = propertyStructure.at("expression");
@@ -1558,7 +1559,10 @@ storm::jani::Automaton JaniParser<ValueType>::parseAutomaton(Json const& automat
         STORM_LOG_THROW(locIds.count(sourceLoc) == 1, storm::exceptions::InvalidJaniException,
                         "Source of edge has unknown location '" << sourceLoc << "' in automaton '" << name << "'.");
         // comment
-        std::string edgeName = getString<ValueType>(edgeEntry.at("comment"), "edge name in edge from '" + sourceLoc + "' in automaton '" + name + "'");       
+        std::string edgeName = "";
+        if (edgeEntry.count("comment") > 0) {
+            edgeName = getString<ValueType>(edgeEntry.at("comment"), "edge name in edge from '" + sourceLoc + "' in automaton '" + name + "'");   
+        }    
         // action
         STORM_LOG_THROW(edgeEntry.count("action") < 2, storm::exceptions::InvalidJaniException,
                         "Edge from " << sourceLoc << " in automaton " << name << " has multiple actions");
