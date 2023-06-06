@@ -52,6 +52,7 @@
 
 #include "storm-parsers/parser/zzz/XesParser.h"
 #include "storm-parsers/parser/ExplicitTraceParser.h"
+#include "storm-parsers/parser/ExpressionParser.h"
 
 #include "storm/utility/Stopwatch.h"
 
@@ -68,8 +69,6 @@ struct SymbolicInput {
     // The preprocessed properties to check (in case they needed amendment).
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
 
-    boost::optional<storm::storage::EventLog> eventLog;
-    
 };
 
 void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& ioSettings, SymbolicInput& input) {
@@ -95,18 +94,6 @@ void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& i
             if (ioSettings.isJaniPropertiesSet()) {
                 input.properties = std::move(janiInput.second);
             }
-            // We add masses to edges if deterministic
-            if (ioSettings.hasTracesSet()) {
-                std::string fname = ioSettings.getJaniInputFilename();
-                fname.erase(fname.end()-4,fname.end());
-                fname.append("json");
-                std::ifstream weightFile(fname);
-                storm::jani::ExportJsonType weights;
-                weightFile >> weights;
-                for (auto & edge : input.model->asJaniModel().getAutomata()[0].getEdges()) {
-                    edge.setMass(weights["transitions"][edge.getName()]["weight"]);
-                }
-            }
         }
         modelParsingWatch.stop();
         STORM_PRINT("Time for model input parsing: " << modelParsingWatch << ".\n\n");
@@ -125,19 +112,6 @@ void parseProperties(storm::settings::modules::IOSettings const& ioSettings, Sym
 
         input.properties.insert(input.properties.end(), newProperties.begin(), newProperties.end());
     }
-}
-
-storm::storage::EventLog parseTraces(storm::jani::Model const& model) {
-    std::string fname = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename();
-    storm::storage::EventLog eventLog;
-    if (fname.substr(fname.length()-3,3) == "xes") {
-        storm::parser::XesParser p(model);
-        eventLog = p.parseXesTraces(fname);
-    } else {
-        storm::parser::ExplicitTraceParser p(model);
-        eventLog = p.parseTraces(fname);
-    }
-    return eventLog;
 }
 
 SymbolicInput parseSymbolicInputQvbs(storm::settings::modules::IOSettings const& ioSettings) {
@@ -177,12 +151,11 @@ SymbolicInput parseSymbolicInput() {
         SymbolicInput input;
         parseSymbolicModelDescription(ioSettings, input);
         parseProperties(ioSettings, input, propertyFilter);
-        if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-            input.eventLog = parseTraces(input.model->asJaniModel());
-        }
         return input;
     }
 }
+
+
 
 struct ModelProcessingInformation {
     // The engine to use
@@ -209,6 +182,56 @@ struct ModelProcessingInformation {
     // If this is false, it could be that the query can not be handled.
     bool isCompatible;
 };
+
+template<typename ValueType>
+storm::storage::EventLog<ValueType> parseTraces(storm::jani::Model const& model, ModelProcessingInformation const& mpi) {
+    std::string fname = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesFilename();
+    storm::storage::EventLog<ValueType> eventLog;
+    if (fname.substr(fname.length()-3,3) == "xes") {
+        storm::parser::XesParser<ValueType> p(model);
+        eventLog = p.parseXesTraces(fname);
+    } else {
+        storm::parser::ExplicitTraceParser<ValueType> p(model);
+        eventLog = p.parseTraces(fname);
+    }
+    return eventLog;
+}
+
+std::vector<std::string> parseWeights (SymbolicInput& input) {
+    std::string fname = storm::settings::getModule<storm::settings::modules::IOSettings>().getJaniInputFilename();
+    fname.erase(fname.end()-4,fname.end());
+    fname.append("json");
+    std::ifstream weightFile(fname);
+    storm::jani::ExportJsonType weights;
+    weightFile >> weights;
+
+    std::vector<std::string> parameters;
+
+    auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+
+    std::unordered_map<std::string, storm::expressions::Expression> identifierMapping;
+
+    for (std::string parString : weights["parameters"]) {
+        auto parVar = expressionManager.declareRationalVariable(parString);
+        auto parConst = storm::jani::Constant(parString,parVar);
+        input.model->asJaniModel().addConstant(parConst);
+        identifierMapping[parString] = parVar.getExpression();
+        parameters.emplace_back(parString);
+    }
+
+    storm::parser::ExpressionParser expressionParser(expressionManager);
+    expressionParser.setIdentifierMapping(identifierMapping);
+
+    for (auto & edge : input.model->asJaniModel().getAutomata()[0].getEdges()) {
+        if (weights["transitions"][edge.getName()]["weight"].is_string()) {
+            edge.setMass(expressionParser.parseFromString(weights["transitions"][edge.getName()]["weight"])); 
+        } else {
+            edge.setMass(expressionParser.parseFromString(weights["transitions"][edge.getName()]["weight"].dump())); 
+        }
+    }   
+
+    return parameters;
+}
 
 void getModelProcessingInformationAutomatic(SymbolicInput const& input, ModelProcessingInformation& mpi) {
     auto hints = storm::settings::getModule<storm::settings::modules::HintSettings>();
@@ -1297,17 +1320,9 @@ typename std::enable_if<DdType == storm::dd::DdType::CUDD && !std::is_same<Value
     STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "CUDD does not support the selected data-type.");
 }
 
-template<typename ValueType>
-void verifyTraceWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
-    auto sparseModel = model->as<storm::models::sparse::Model<ValueType>>();
-    storm::api::verifyTraceWithSparseEngine<ValueType>(mpi.env, sparseModel, input.eventLog.get());
-}
-
 template<storm::dd::DdType DdType, typename ValueType>
 void verifyModel(std::shared_ptr<storm::models::ModelBase> const& model, SymbolicInput const& input, ModelProcessingInformation const& mpi) {
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        verifyTraceWithSparseEngine<ValueType>(model,input,mpi);
-    } else if (model->isSparseModel()) {
+    if (model->isSparseModel()) {
         verifyWithSparseEngine<ValueType>(model, input, mpi);
     } else {
         STORM_LOG_ASSERT(model->isSymbolicModel(), "Unexpected model type.");
@@ -1347,6 +1362,109 @@ std::shared_ptr<storm::models::ModelBase> buildPreprocessExportModelWithValueTyp
         exportModel<DdType, BuildValueType>(model, input);
     }
     return model;
+}
+
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Dtmc<ValueType>> buildProductTraceModelAsDtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
+                       storm::storage::EventLog<ValueType> const& eventLog, std::vector<uint_fast64_t> trace, std::vector<std::string> parameters = std::vector<std::string>()) {
+
+    if constexpr (!std::is_same<ValueType,storm::RationalFunction>::value) {
+        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.buildProductAsDtmc(env, trace);
+    } else {
+        storm::modelchecker::TraceMdpModelCheckerPars<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.buildProductAsDtmc(env, trace, parameters);
+    }
+}
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Dtmc<ValueType>> buildProductTraceModelAsDtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
+                       storm::storage::EventLog<ValueType> const& eventLog, std::vector<uint_fast64_t> trace, std::vector<std::string> parameters = std::vector<std::string>()) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        return buildProductTraceModelAsDtmc(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog, trace, parameters);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported by the model product (trace)");
+    }
+}
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildProductTraceModelAsCtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
+                       storm::storage::EventLog<ValueType> const& eventLog, std::vector<uint_fast64_t> trace, std::vector<std::string> parameters = std::vector<std::string>()) {
+
+    if constexpr (!std::is_same<ValueType,storm::RationalFunction>::value) {
+        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.buildProductAsCtmc(env, trace);
+    } else {
+        storm::modelchecker::TraceMdpModelCheckerPars<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.buildProductAsCtmc(env, trace, parameters);
+    }
+}
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildProductTraceModelAsCtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
+                       storm::storage::EventLog<ValueType> const& eventLog, std::vector<uint_fast64_t> trace, std::vector<std::string> parameters = std::vector<std::string>()) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        return buildProductTraceModelAsCtmc(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog, trace, parameters);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported by the model product (trace)");
+    }
+}
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildModelAsCtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp) {
+
+    if constexpr (!std::is_same<ValueType,storm::RationalFunction>::value) {
+        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.buildAsCtmc(env);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "buildModelAsCtmc doesn't support Parameters.");
+    }
+}
+
+template<typename ValueType>
+std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildModelAsCtmc(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        return buildModelAsCtmc(env, model->template as<storm::models::sparse::Mdp<ValueType>>());
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported");
+    }
+}
+
+
+template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>
+void processTracesInputWithValueTypeAndDdlib(SymbolicInput& input, storm::storage::EventLog<BuildValueType> eventLog, ModelProcessingInformation const& mpi) {
+    std::shared_ptr<storm::models::ModelBase> preModel = buildPreprocessExportModelWithValueTypeAndDdlib<DdType, BuildValueType, VerificationValueType>(input, mpi);
+    auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+    auto sparseModel = preModel->as<storm::models::sparse::Model<VerificationValueType>>();
+     for (auto trace : eventLog.getTraces()) {
+        auto id = eventLog.getId(trace);
+        std::shared_ptr<storm::models::ModelBase> model = buildProductTraceModelAsCtmc(mpi.env,sparseModel, eventLog, trace);
+        auto rightFormula = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula("final"));
+        auto formula = std::make_shared<storm::logic::EventuallyFormula>(storm::logic::EventuallyFormula(rightFormula));
+        auto probFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula);
+        auto task = storm::api::createTask<VerificationValueType>(probFormula, true);
+        auto result = storm::api::verifyWithSparseEngine<VerificationValueType>(mpi.env, model->as<storm::models::sparse::Model<VerificationValueType>>(), task);
+        eventLog.addProbability(result->template asExplicitQuantitativeCheckResult<VerificationValueType>()[0]);
+    } 
+    eventLog.printDetailledInformation();
+    std::shared_ptr<storm::models::ModelBase> model = buildModelAsCtmc(mpi.env,sparseModel);
+
+    for (auto p : input.properties) {
+        std::cout << p << "\n";
+        auto task = storm::api::createTask<VerificationValueType>(p.getRawFormula(), true);
+        auto result = storm::api::verifyWithSparseEngine<VerificationValueType>(mpi.env, model->as<storm::models::sparse::Model<VerificationValueType>>(), task);
+        std::cout << result->template asExplicitQuantitativeCheckResult<VerificationValueType>() << "\n";
+    }
+
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasPslExpression()) {
+        std::string stringPsl = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslExpr();
+        storm::api::verifyPsl<VerificationValueType>(mpi.env, stringPsl, sparseModel);
+    }
+    
+    
+
+     
 }
 
 template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>

@@ -10,6 +10,8 @@
 
 namespace storm {
 namespace parser {
+
+template <typename ValueType>
 class ExplicitTraceParser {
    public:
 
@@ -21,15 +23,15 @@ class ExplicitTraceParser {
      * @param filename The name of the file to parse.
      * @return The resulting GSPN.
      */
-    storm::storage::EventLog& parseTraces(std::string const& filename);
+    storm::storage::EventLog<ValueType>& parseTraces(std::string const& filename);
 
-    storm::storage::EventLog& getEventLog();
+    storm::storage::EventLog<ValueType>& getEventLog();
     storm::jani::Model const& getModel();
 
    private:
     // the constructed Traces
     int limit = std::numeric_limits<int>::max();
-    storm::storage::EventLog eventLog;
+    storm::storage::EventLog<ValueType> eventLog;
     storm::jani::Model model;
     uint_fast64_t traceID = 0;
 };

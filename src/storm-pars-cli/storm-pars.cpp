@@ -36,6 +36,9 @@
 
 #include "storm/storage/StronglyConnectedComponentDecomposition.h"
 #include "storm/storage/SymbolicModelDescription.h"
+#include "storm/storage/EventLog.h"
+
+#include "storm/logic/Formulas.h"
 
 #include "storm/io/file.h"
 #include "storm/utility/initialize.h"
@@ -892,7 +895,7 @@ namespace storm {
 
             if (regions.empty()) {
                 storm::pars::verifyPropertiesWithSparseEngine(model, input, samples);
-            } else {
+            }  else {
                 auto regionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
                 auto monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
                 if (monSettings.isMonotonicityAnalysisSet()) {
@@ -1042,6 +1045,230 @@ namespace storm {
             }
         }
 
+        template <storm::dd::DdType DdType, typename ValueType>
+        void verifyPsl(SymbolicInput& input, storm::cli::ModelProcessingInformation const& mpi, std::vector<std::string> parameters, std::shared_ptr<storm::models::ModelBase> preModel) {
+            auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+            auto buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
+            auto parSettings = storm::settings::getModule<storm::settings::modules::ParametricSettings>();
+            auto monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
+            auto RegionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
+
+            std::string stringPsl = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslExpr();
+            auto sparseModel = preModel->as<storm::models::sparse::Model<ValueType>>();
+            std::pair<std::shared_ptr<storm::models::ModelBase>,std::shared_ptr<storm::logic::Formula>> pair = storm::api::buildPslModel<ValueType>(mpi.env, stringPsl, sparseModel, parameters);
+            std::shared_ptr<storm::models::ModelBase> model = pair.first;
+            std::shared_ptr<storm::logic::Formula> formula = pair.second;
+
+            model->printModelInformationToStream(std::cout);
+            auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+            std::set<storm::expressions::Variable> emptySet;
+
+
+            if (!RegionSettings.isRegionSet()) {
+                auto probFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula);
+                storm::jani::Property prop("P=? Psl", probFormula, emptySet);
+                input.properties.emplace_back(prop);
+            } else {
+                storm::logic::Bound bound(storm::logic::ComparisonType::Less, expressionManager.rational(0.2));
+                storm::logic::OperatorInformation operatorInformation(boost::none, bound);
+                auto probFormula2 = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula, operatorInformation);
+                storm::jani::Property prop2("Psl P<0.2", probFormula2, emptySet);
+                input.properties.emplace_back(prop2);
+            }
+
+            // If minimization is active and the model is parametric, parameters might be minimized away because they are inconsequential.
+            // This is the set of all such inconsequential parameters.
+            std::set<RationalFunctionVariable> omittedParameters;
+            if (model) {
+                auto preprocessingResult = storm::pars::preprocessModel<DdType, ValueType>(model, input, mpi);
+                if (preprocessingResult.changed) {
+                    if (model->isOfType(models::ModelType::Dtmc) || model->isOfType(models::ModelType::Mdp)) {
+                        auto const previousParams = storm::models::sparse::getAllParameters(*model->template as<storm::models::sparse::Model<ValueType>>());
+                        auto const currentParams = storm::models::sparse::getAllParameters(*(preprocessingResult.model)->template as<storm::models::sparse::Model<ValueType>>());
+                        for (auto const& variable : previousParams) {
+                            if (!currentParams.count(variable)) {
+                                omittedParameters.insert(variable);
+                            }
+                        }
+                    }
+                    model = preprocessingResult.model;
+
+                    if (preprocessingResult.formulas) {
+                        std::vector<storm::jani::Property> newProperties;
+                        for (size_t i = 0; i < preprocessingResult.formulas.get().size(); ++i) {
+                            auto formula = preprocessingResult.formulas.get().at(i);
+                            STORM_LOG_ASSERT(i < input.properties.size(), "Index " << i << " greater than number of properties.");
+                            storm::jani::Property property = input.properties.at(i);
+                            newProperties.push_back(storm::jani::Property(property.getName(), formula, property.getUndefinedConstants(), property.getComment()));
+                        }
+                        input.properties = newProperties;
+                    }
+
+                    model->printModelInformationToStream(std::cout);
+                }
+            }
+            std::vector<storm::storage::ParameterRegion<ValueType>> regions = parseRegions<ValueType>(model);
+
+            std::string samplesAsString = parSettings.getSamples();
+            SampleInformation<ValueType> samples;
+            if (!samplesAsString.empty()) {
+                samples = parseSamples<ValueType>(model, samplesAsString,
+                                                parSettings.isSamplesAreGraphPreservingSet());
+                samples.exact = parSettings.isSampleExactSet();
+            }
+            if (model) {
+                storm::cli::exportModel<DdType, ValueType>(model, input);
+            }
+
+            if (parSettings.onlyObtainConstraints()) {
+                STORM_LOG_THROW(parSettings.exportResultToFile(), storm::exceptions::InvalidSettingsException,
+                                "When computing constraints, export path has to be specified.");
+                storm::api::exportParametricResultToFile<ValueType>(boost::none,
+                                                                    storm::analysis::ConstraintCollector<ValueType>(
+                                                                            *(model->as<storm::models::sparse::Model<ValueType>>())),
+                                                                    parSettings.exportResultPath());
+                return;
+            }
+
+            if (model) {
+                boost::optional<std::pair<std::set<storm::RationalFunctionVariable>, std::set<storm::RationalFunctionVariable>>> monotoneParameters;
+                if (monSettings.isMonotoneParametersSet()) {
+                    monotoneParameters = std::move(
+                            storm::api::parseMonotoneParameters<ValueType>(monSettings.getMonotoneParameterFilename(),
+                                    model->as<storm::models::sparse::Model<ValueType>>()));
+                }
+// TODO: is onlyGlobalSet was used here
+                verifyParametricModel<DdType, ValueType>(model, input, regions, samples, storm::api::MonotonicitySetting(parSettings.isUseMonotonicitySet(), false, monSettings.isUsePLABoundsSet()), monotoneParameters, monSettings.getMonotonicityThreshold(), omittedParameters);
+                input.properties.clear();
+            }
+        }
+        
+
+        template <storm::dd::DdType DdType, typename ValueType>
+        void processTraceInputWithValueTypeAndDdlib(SymbolicInput& input, storm::cli::ModelProcessingInformation const& mpi, storm::storage::EventLog<ValueType> const& eventLog, std::vector<std::string> parameters, std::shared_ptr<storm::models::ModelBase> preModel) {
+            auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+            auto buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
+            auto parSettings = storm::settings::getModule<storm::settings::modules::ParametricSettings>();
+            auto monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
+            auto RegionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
+
+            for (auto trace : eventLog.getTraces()) {
+                
+                auto sparseModel = preModel->as<storm::models::sparse::Model<ValueType>>();
+                std::shared_ptr<storm::models::ModelBase> model = storm::cli::buildProductTraceModelAsDtmc(mpi.env,sparseModel,eventLog,trace, parameters);
+
+                auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+                auto rightFormula = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula("final"));
+                auto formula = std::make_shared<storm::logic::EventuallyFormula>(storm::logic::EventuallyFormula(rightFormula));
+                auto probFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula);
+                std::set<storm::expressions::Variable> emptySet;
+                if (!RegionSettings.isRegionSet()) {
+                    storm::jani::Property prop("test P=?", probFormula, emptySet);
+                    input.properties.emplace_back(prop);
+                } else {
+                    storm::logic::Bound bound(storm::logic::ComparisonType::Less, expressionManager.rational(0.2));
+                    storm::logic::OperatorInformation operatorInformation(boost::none, bound);
+                    auto probFormula2 = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula, operatorInformation);
+                    storm::jani::Property prop2("test P<0.5", probFormula2, emptySet);
+                    input.properties.emplace_back(prop2);
+                }
+                // If minimization is active and the model is parametric, parameters might be minimized away because they are inconsequential.
+                // This is the set of all such inconsequential parameters.
+                std::set<RationalFunctionVariable> omittedParameters;
+                if (model) {
+                    auto preprocessingResult = storm::pars::preprocessModel<DdType, ValueType>(model, input, mpi);
+                    if (preprocessingResult.changed) {
+                        if (model->isOfType(models::ModelType::Dtmc) || model->isOfType(models::ModelType::Mdp)) {
+                            auto const previousParams = storm::models::sparse::getAllParameters(*model->template as<storm::models::sparse::Model<ValueType>>());
+                            auto const currentParams = storm::models::sparse::getAllParameters(*(preprocessingResult.model)->template as<storm::models::sparse::Model<ValueType>>());
+                            for (auto const& variable : previousParams) {
+                                if (!currentParams.count(variable)) {
+                                    omittedParameters.insert(variable);
+                                }
+                            }
+                        }
+                        model = preprocessingResult.model;
+
+                        if (preprocessingResult.formulas) {
+                            std::vector<storm::jani::Property> newProperties;
+                            for (size_t i = 0; i < preprocessingResult.formulas.get().size(); ++i) {
+                                auto formula = preprocessingResult.formulas.get().at(i);
+                                STORM_LOG_ASSERT(i < input.properties.size(), "Index " << i << " greater than number of properties.");
+                                storm::jani::Property property = input.properties.at(i);
+                                newProperties.push_back(storm::jani::Property(property.getName(), formula, property.getUndefinedConstants(), property.getComment()));
+                            }
+                            input.properties = newProperties;
+                        }
+
+                        model->printModelInformationToStream(std::cout);
+                    }
+                }
+                std::vector<storm::storage::ParameterRegion<ValueType>> regions = parseRegions<ValueType>(model);
+
+                std::string samplesAsString = parSettings.getSamples();
+                SampleInformation<ValueType> samples;
+                if (!samplesAsString.empty()) {
+                    samples = parseSamples<ValueType>(model, samplesAsString,
+                                                    parSettings.isSamplesAreGraphPreservingSet());
+                    samples.exact = parSettings.isSampleExactSet();
+                }
+                if (model) {
+                    storm::cli::exportModel<DdType, ValueType>(model, input);
+                }
+
+                if (parSettings.onlyObtainConstraints()) {
+                    STORM_LOG_THROW(parSettings.exportResultToFile(), storm::exceptions::InvalidSettingsException,
+                                    "When computing constraints, export path has to be specified.");
+                    storm::api::exportParametricResultToFile<ValueType>(boost::none,
+                                                                        storm::analysis::ConstraintCollector<ValueType>(
+                                                                                *(model->as<storm::models::sparse::Model<ValueType>>())),
+                                                                        parSettings.exportResultPath());
+                    return;
+                }
+
+                if (model) {
+                    boost::optional<std::pair<std::set<storm::RationalFunctionVariable>, std::set<storm::RationalFunctionVariable>>> monotoneParameters;
+                    if (monSettings.isMonotoneParametersSet()) {
+                        monotoneParameters = std::move(
+                                storm::api::parseMonotoneParameters<ValueType>(monSettings.getMonotoneParameterFilename(),
+                                        model->as<storm::models::sparse::Model<ValueType>>()));
+                    }
+    // TODO: is onlyGlobalSet was used here
+                    verifyParametricModel<DdType, ValueType>(model, input, regions, samples, storm::api::MonotonicitySetting(parSettings.isUseMonotonicitySet(), false, monSettings.isUsePLABoundsSet()), monotoneParameters, monSettings.getMonotonicityThreshold(), omittedParameters);
+                    input.properties.clear();
+                }
+            }
+        }
+
+
+
+
+        template <storm::dd::DdType DdType, typename ValueType>
+        void processMathisMode(SymbolicInput& input, storm::cli::ModelProcessingInformation const& mpi) {
+            auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+
+            STORM_LOG_THROW(mpi.engine == storm::utility::Engine::Sparse || mpi.engine == storm::utility::Engine::Hybrid || mpi.engine == storm::utility::Engine::Dd, storm::exceptions::InvalidSettingsException, "The selected engine is not supported for parametric models.");
+
+            std::vector<std::string> parameters = storm::cli::parseWeights(input);
+            std::shared_ptr<storm::models::ModelBase> preModel;
+            preModel = storm::cli::buildModel<DdType, ValueType>(input, ioSettings, mpi);
+            preModel->printModelInformationToStream(std::cout);
+            
+            if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+                storm::storage::EventLog<ValueType> eventLog = storm::cli::parseTraces<ValueType>(input.model->asJaniModel(), mpi);
+                processTraceInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalFunction>(input, mpi, eventLog, parameters, preModel);
+            }
+
+            if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasPslExpression()) {
+                verifyPsl<storm::dd::DdType::Sylvan, storm::RationalFunction>(input, mpi, parameters, preModel);
+            }
+        }
+
+
+
+
+
+
         void processOptions() {
             // Start by setting some urgent options (log levels, resources, etc.)
             storm::cli::setUrgentOptions();
@@ -1052,11 +1279,16 @@ namespace storm {
             
             // Parse and preprocess symbolic input (PRISM, JANI, properties, etc.)
             auto symbolicInput = storm::cli::parseSymbolicInput();
+            
             storm::cli::ModelProcessingInformation mpi;
             std::tie(symbolicInput, mpi) = storm::cli::preprocessSymbolicInput(symbolicInput);
-            processInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalFunction>(symbolicInput, mpi);
+            
+            if (storm::settings::getModule<storm::settings::modules::IOSettings>().isMathisMode()) {
+                processMathisMode<storm::dd::DdType::Sylvan, storm::RationalFunction>(symbolicInput, mpi);
+            } else {
+                processInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalFunction>(symbolicInput, mpi);
+            }
         }
-
     }
 }
 
@@ -1075,9 +1307,7 @@ int main(const int argc, const char** argv) {
         if (!storm::cli::parseOptions(argc, argv)) {
             return -1;
         }
-
         storm::pars::processOptions();
-
         totalTimer.stop();
         if (storm::settings::getModule<storm::settings::modules::ResourceSettings>().isPrintTimeAndMemorySet()) {
             storm::cli::printTimeAndMemoryStatistics(totalTimer.getTimeInMilliseconds());

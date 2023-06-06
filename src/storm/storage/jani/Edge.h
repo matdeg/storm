@@ -73,12 +73,12 @@ class Edge {
     /*!
      * Retrieves the mass of this edge.
      */
-    double const& getMass() const;
+    storm::expressions::Expression const& getMass() const;
 
     /*!
      * Sets a new mass for this edge.
      */
-    void setMass(double const& mass);
+    void setMass(storm::expressions::Expression const& mass);
 
     /*!
      * Retrieves the guard of this edge.
@@ -177,7 +177,7 @@ class Edge {
 
    private:
     /// the mass of the edge 
-    double mass;
+    storm::expressions::Expression mass;
 
     /// The name of the edge
     std::string name;

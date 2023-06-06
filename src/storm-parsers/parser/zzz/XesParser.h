@@ -13,6 +13,8 @@
 
 namespace storm {
 namespace parser {
+
+template <typename ValueType>
 class XesParser {
    public:
 
@@ -24,7 +26,7 @@ class XesParser {
      * @param filename The name of the file to parse.
      * @return The resulting GSPN.
      */
-    storm::storage::EventLog& parseXesTraces(std::string const& filename);
+    storm::storage::EventLog<ValueType>& parseXesTraces(std::string const& filename);
 
     void traverseProjectElement(xercesc::DOMNode const* const node);
     void traverseTraceElement(xercesc::DOMNode const* const node);
@@ -32,13 +34,13 @@ class XesParser {
     std::string traverseStringElement(xercesc::DOMNode const* const node);
     bool isConceptName(xercesc::DOMNode const* const node);
 
-    storm::storage::EventLog& getEventLog();
+    storm::storage::EventLog<ValueType>& getEventLog();
     storm::jani::Model const& getModel();
 
    private:
     // the constructed Traces
     int limit = std::numeric_limits<int>::max();
-    storm::storage::EventLog eventLog;
+    storm::storage::EventLog<ValueType> eventLog;
     storm::jani::Model model;
     uint_fast64_t traceID = 0;
 };

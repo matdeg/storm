@@ -92,9 +92,16 @@ std::vector<uint_fast64_t> const JaniChoiceOrigins::testFunction(uint_fast64_t k
     return toRet;
 }
 
-double const& JaniChoiceOrigins::getMass(uint_fast64_t k) const {
+storm::expressions::Expression const& JaniChoiceOrigins::getMass(uint_fast64_t k) const {
     uint_fast64_t edgeIndex = *getEdgeIndexSet(k).nth(0);
     return model->getAutomata()[0].getEdge(edgeIndex).getMass();
+}
+
+std::string JaniChoiceOrigins::getActionName(uint_fast64_t k) const {
+    uint_fast64_t edgeIndex = *getEdgeIndexSet(k).nth(0);
+    std::vector<uint_fast64_t> edgeIndexToAction = edgeIndexToActionIndex();
+    uint_fast64_t actionIndex = edgeIndexToAction[edgeIndex];
+    return model->getAction(actionIndex).getName();
 }
 
 std::vector<uint_fast64_t> const JaniChoiceOrigins::edgeIndexToActionIndex() const {

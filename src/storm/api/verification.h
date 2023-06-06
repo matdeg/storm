@@ -20,6 +20,7 @@
 #include "storm/modelchecker/reachability/SparseDtmcEliminationModelChecker.h"
 #include "storm/modelchecker/rpatl/SparseSmgRpatlModelChecker.h"
 #include "storm/modelchecker/trace/TraceMdpModelChecker.h"
+#include "storm/modelchecker/trace/TraceMdpModelCheckerPars.h"
 
 #include "storm/storage/EventLog.h"
 
@@ -355,50 +356,6 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
     return verifyWithSparseEngine(env, model, task);
 }
 
-template<typename ValueType>
-void verifyTraceWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp,
-                       storm::storage::EventLog const& eventLog) {
-
-    if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {
-        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "rational function are not supported by the sparse engine (trace)");
-    } else {
-        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
-        ValueType unionProbability = 0.0;
-        uint_fast64_t numberNonZeroTraces = 0;
-        std::cout << "\n";
-
-        for (uint_fast64_t i = 0; i < eventLog.size(); i++) {
-            storm::storage::Trace trace = eventLog.getTrace(i);
-            if (trace.getValid()) {
-                auto result = modelchecker.check(env,trace.get())->template asExplicitQuantitativeCheckResult<ValueType>()[0];
-                unionProbability = unionProbability + result;
-                if (result > 0) {
-                    numberNonZeroTraces++;
-                }
-                std::cout << "Result (for trace n°" << i << " ) : " << result << "\n";
-            } else {
-                std::cout << "Result (for trace n°" << i << " ) : Invalid Trace\n";
-            }
-        }
-        std::cout << "\n\n----------------------------------------------------\n";
-        std::cout << "Event Log details : \n";
-        std::cout << "Number of Traces  : " << eventLog.size() << "\n";
-        std::cout << "Number of Invalid Traces  : " << eventLog.getInvalidTracesSize() << " (i.e. " << 100*((float)eventLog.getInvalidTracesSize()/(float)eventLog.size()) << "%)\n";
-        std::cout << "Probability of the model to output a trace from the log : " << unionProbability << "\n";
-        std::cout << "Ratio of the log conform to the model (non-zero traces) : " << 100 * ((float)numberNonZeroTraces/(float)eventLog.size()) << "%\n";
-        std::cout << "----------------------------------------------------\n\n";
-    }
-}
-
-template<typename ValueType>
-void verifyTraceWithSparseEngine(storm::Environment const& env, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model,
-                       storm::storage::EventLog const& eventLog) {
-    if (model->getType() == storm::models::ModelType::Mdp) {
-        verifyTraceWithSparseEngine(env, model->template as<storm::models::sparse::Mdp<ValueType>>(), eventLog);
-    } else {
-        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported by the sparse engine (trace)");
-    }
-}
 
 template<typename ValueType>
 std::unique_ptr<storm::modelchecker::CheckResult> computeSteadyStateDistributionWithSparseEngine(
@@ -662,6 +619,45 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithDdEngine(std::shared
     Environment env;
     return verifyWithDdEngine(env, model, task);
 }
+
+template<typename ValueType>
+void verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp) {
+    if constexpr (std::is_same<ValueType,double>::value) {
+        storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        modelchecker.checkPsl(env, stringPsl);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not double");
+    }
+}
+
+template<typename ValueType>
+void verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        verifyPsl(env, stringPsl, model->template as<storm::models::sparse::Mdp<ValueType>>());
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported");
+    }
+}
+
+template<typename ValueType>
+std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>,std::shared_ptr<storm::logic::Formula>> buildPslModel(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp, std::vector<std::string> parameters) {
+    if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {
+        storm::modelchecker::TraceMdpModelCheckerPars<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
+        return modelchecker.checkPsl(env, stringPsl, parameters);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not double");
+    }
+}
+
+template<typename ValueType>
+std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>,std::shared_ptr<storm::logic::Formula>> buildPslModel(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model, std::vector<std::string> parameters) {
+    if (model->getType() == storm::models::ModelType::Mdp) {
+        return buildPslModel(env, stringPsl, model->template as<storm::models::sparse::Mdp<ValueType>>(), parameters);
+    } else {
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported");
+    }
+}
+
 
 }  // namespace api
 }  // namespace storm

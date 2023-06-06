@@ -20,7 +20,9 @@ const std::string IOSettings::moduleName = "io";
 const std::string IOSettings::notTracesOptionName = "not-traces";
 const std::string IOSettings::unionTracesOptionName = "union-traces";
 const std::string IOSettings::limitTracesOptionName = "limit-traces";
+const std::string IOSettings::PslExprOptionName = "psl";
 const std::string IOSettings::tracesInputOptionName = "traces";
+const std::string IOSettings::mathisModeOptionName = "mathis";
 const std::string IOSettings::exportDotOptionName = "exportdot";
 const std::string IOSettings::exportDotMaxWidthOptionName = "dot-maxwidth";
 const std::string IOSettings::exportBuildOptionName = "exportbuild";
@@ -62,6 +64,7 @@ const std::string IOSettings::propertiesAsMultiOptionName = "propsasmulti";
 std::string preventDRNPlaceholderOptionName = "no-drn-placeholders";
 
 IOSettings::IOSettings() : ModuleSettings(moduleName) {
+    this->addOption(storm::settings::OptionBuilder(moduleName, mathisModeOptionName, false, "Enables Mathis Mode").build());
     this->addOption(
         storm::settings::OptionBuilder(moduleName, exportDotOptionName, false,
                                        "If given, the loaded model will be written to the specified file in the dot format.")
@@ -71,6 +74,9 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
             .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, tracesInputOptionName, false, "traces should be given via a .xes file, they are sequence of actions of the gspn. Storm compute their probability")
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("filename", "path to file").build())
+                    .build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, PslExprOptionName, false, "Psl expression to check for SLPN")
+                    .addArgument(storm::settings::ArgumentBuilder::createStringArgument("PslExpr", "Psl Expression").build())
                     .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, limitTracesOptionName, false, "limit the number of traces managed by storm")
                     .addArgument(storm::settings::ArgumentBuilder::createUnsignedIntegerArgument("limit", "limit of number of traces").build())
@@ -281,6 +287,11 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
                         .build());
 }
 
+bool IOSettings::isMathisMode() const {
+    return this->getOption(mathisModeOptionName).getHasOptionBeenSet();
+}
+
+
 bool IOSettings::isExportDotSet() const {
     return this->getOption(exportDotOptionName).getHasOptionBeenSet();
 }
@@ -292,6 +303,15 @@ std::string IOSettings::getExportDotFilename() const {
 size_t IOSettings::getExportDotMaxWidth() const {
     return this->getOption(exportDotMaxWidthOptionName).getArgumentByName("width").getValueAsUnsignedInteger();
 }
+
+bool IOSettings::hasPslExpression() const {
+    return this->getOption(PslExprOptionName).getHasOptionBeenSet();
+}
+
+std::string IOSettings::getPslExpr() const {
+    return this->getOption(PslExprOptionName).getArgumentByName("PslExpr").getValueAsString();
+}
+
 
 bool IOSettings::isUnionTraces() const {
     return this->getOption(unionTracesOptionName).getHasOptionBeenSet();

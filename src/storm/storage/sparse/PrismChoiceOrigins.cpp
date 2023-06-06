@@ -185,7 +185,12 @@ std::vector<uint_fast64_t> const PrismChoiceOrigins::edgeIndexToActionIndex() co
                     "should not have called edgeIndextoActionIndex in PrismChoiceOrigins");
 }
 
-double const& PrismChoiceOrigins::getMass(uint_fast64_t k) const {
+storm::expressions::Expression const& PrismChoiceOrigins::getMass(uint_fast64_t k) const {
+    STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
+                    "should not have called getMass in ChoiceOrigins");
+}
+
+std::string PrismChoiceOrigins::getActionName(uint_fast64_t k) const {
     STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
                     "should not have called getMass in ChoiceOrigins");
 }

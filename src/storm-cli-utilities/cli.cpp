@@ -265,6 +265,30 @@ void processOptions() {
     // Export symbolic input (if requested)
     exportSymbolicInput(symbolicInput);
 
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        switch (mpi.verificationValueType) {
+        case ModelProcessingInformation::ValueType::Parametric:
+            {
+                STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Rational Functions are not supported here");
+            }
+            break;
+        case ModelProcessingInformation::ValueType::Exact:
+            {
+                storm::storage::EventLog<storm::RationalNumber> eventLog = parseTraces<storm::RationalNumber>(symbolicInput.model->asJaniModel(), mpi);
+                std::vector<std::string> parameters = parseWeights(symbolicInput);
+                processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalNumber>(symbolicInput, eventLog, mpi);
+            }
+            break;
+        case ModelProcessingInformation::ValueType::FinitePrecision:
+            {
+                storm::storage::EventLog<double> eventLog = parseTraces<double>(symbolicInput.model->asJaniModel(), mpi);
+                std::vector<std::string> parameters = parseWeights(symbolicInput);
+                processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, double>(symbolicInput, eventLog, mpi);
+            }
+            break;
+    }
+    } else {
+
 #ifdef STORM_HAVE_CARL
     switch (mpi.verificationValueType) {
         case ModelProcessingInformation::ValueType::Parametric:
@@ -282,6 +306,7 @@ void processOptions() {
                     "No exact numbers or parameters are supported in this build.");
     processInputWithValueType<double>(symbolicInput, mpi);
 #endif
+}
 }
 
 void printTimeAndMemoryStatistics(uint64_t wallclockMilliseconds) {

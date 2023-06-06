@@ -13,15 +13,17 @@
 namespace storm {
 namespace parser {
 
-ExplicitTraceParser::ExplicitTraceParser(storm::jani::Model const& model) : model(model) {}
+template <typename ValueType>
+ExplicitTraceParser<ValueType>::ExplicitTraceParser(storm::jani::Model const& model) : model(model) {}
 
-storm::storage::EventLog& ExplicitTraceParser::parseTraces(std::string const& filename) {
+template <typename ValueType>
+storm::storage::EventLog<ValueType>& ExplicitTraceParser<ValueType>::parseTraces(std::string const& filename) {
     
     storm::utility::Stopwatch modelParsingWatch(true);
 
     std::ifstream file(filename);
     std::string l;
-    storm::storage::Trace trace(traceID++);
+    std::vector<uint_fast64_t> trace;
     bool isValidTrace = true;
 
 
@@ -33,13 +35,11 @@ storm::storage::EventLog& ExplicitTraceParser::parseTraces(std::string const& fi
             } else {
                 isValidTrace = false;
             }
-            trace.addEvent(index);
+            trace.emplace_back(index);
         } else {
-            if (isValidTrace) {
-                eventLog.addTrace(trace);
-            }
-            trace = storm::storage::Trace(traceID++);
+            eventLog.addTrace(trace,isValidTrace);
             isValidTrace = true;
+            trace.clear();
         }
     }
 
@@ -49,15 +49,19 @@ storm::storage::EventLog& ExplicitTraceParser::parseTraces(std::string const& fi
     
 }
 
-
-storm::storage::EventLog& ExplicitTraceParser::getEventLog() {
+template <typename ValueType>
+storm::storage::EventLog<ValueType>& ExplicitTraceParser<ValueType>::getEventLog() {
     return this->eventLog;
 }
 
-
-storm::jani::Model const& ExplicitTraceParser::getModel() {
+template <typename ValueType>
+storm::jani::Model const& ExplicitTraceParser<ValueType>::getModel() {
     return this->model;
 }
+
+template class ExplicitTraceParser<double>;
+template class ExplicitTraceParser<storm::RationalFunction>;
+template class ExplicitTraceParser<storm::RationalNumber>;
 
 } //namespace parser
 } //namespace storm

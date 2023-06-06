@@ -5,6 +5,7 @@
 
 #include "storm/storage/BoostTypes.h"
 #include "storm/storage/sparse/ChoiceOrigins.h"
+#include "storm/storage/expressions/Expressions.h"
 
 namespace storm {
 namespace jani {
@@ -55,7 +56,9 @@ class JaniChoiceOrigins : public ChoiceOrigins {
 
     virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const override;
 
-    virtual double const& getMass(uint_fast64_t k) const override;
+    virtual storm::expressions::Expression const& getMass(uint_fast64_t k) const override;
+
+    virtual std::string getActionName(uint_fast64_t k) const override;
 
    private:
     /*

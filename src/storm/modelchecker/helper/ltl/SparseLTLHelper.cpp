@@ -203,6 +203,7 @@ std::vector<ValueType> SparseLTLHelper<ValueType, Nondeterministic>::computeDAPr
 
     std::vector<storm::storage::BitVector> statesForAP;
     for (const std::string& ap : apSet.getAPs()) {
+        std::cout << ap << "\n";
         auto it = apSatSets.find(ap);
         STORM_LOG_THROW(it != apSatSets.end(), storm::exceptions::InvalidOperationException,
                         "Deterministic automaton has AP " << ap << ", does not appear in formula");

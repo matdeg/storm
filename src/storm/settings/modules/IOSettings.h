@@ -36,6 +36,12 @@ class IOSettings : public ModuleSettings {
      */
     std::string getExportDotFilename() const;
 
+    bool isMathisMode() const;
+
+    bool hasPslExpression() const;
+
+    std::string getPslExpr() const;
+
     /*!
      * Retrieves the maximal width for labels in the dot format.
      *
@@ -403,6 +409,8 @@ class IOSettings : public ModuleSettings {
    private:
     // Define the string names of the options as constants.
     static const std::string unionTracesOptionName;
+    static const std::string mathisModeOptionName;
+    static const std::string PslExprOptionName;
     static const std::string notTracesOptionName;
     static const std::string exportDotOptionName;
     static const std::string tracesInputOptionName;

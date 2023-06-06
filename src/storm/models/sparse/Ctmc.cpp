@@ -26,13 +26,16 @@ template<typename ValueType, typename RewardModelType>
 Ctmc<ValueType, RewardModelType>::Ctmc(storm::storage::sparse::ModelComponents<ValueType, RewardModelType> const& components)
     : DeterministicModel<ValueType, RewardModelType>(storm::models::ModelType::Ctmc, components) {
     if (components.exitRates) {
+        std::cout << "345\n";
         exitRates = components.exitRates.get();
     } else {
+        std::cout << "123\n";
         STORM_LOG_ASSERT(components.rateTransitions, "No rate information given for CTMC.");
         exitRates = createExitRateVector(this->getTransitionMatrix());
     }
 
     if (!components.rateTransitions) {
+        std::cout << "123245\n";
         this->getTransitionMatrix().scaleRowsInPlace(exitRates);
     }
 }

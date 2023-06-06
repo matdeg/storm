@@ -19,9 +19,11 @@
 namespace storm {
 namespace parser {
 
-XesParser::XesParser(storm::jani::Model const& model) : model(model) {}
+template<typename ValueType>
+XesParser<ValueType>::XesParser(storm::jani::Model const& model) : model(model) {}
 
-storm::storage::EventLog& XesParser::parseXesTraces(std::string const& filename) {
+template<typename ValueType>
+storm::storage::EventLog<ValueType>& XesParser<ValueType>::parseXesTraces(std::string const& filename) {
     #ifdef STORM_HAVE_XERCES
     // initialize xercesc
     storm::utility::Stopwatch modelParsingWatch(true);
@@ -91,7 +93,8 @@ storm::storage::EventLog& XesParser::parseXesTraces(std::string const& filename)
 #endif
 }
 
-void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
+template<typename ValueType>
+void XesParser<ValueType>::traverseProjectElement(xercesc::DOMNode const* const node) {
     // traverse children
     for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength() && traceID < limit; ++i) {
         auto child = node->getChildNodes()->item(i);
@@ -102,8 +105,9 @@ void XesParser::traverseProjectElement(xercesc::DOMNode const* const node) {
     }
 }
 
-void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
-    storm::storage::Trace trace(traceID);
+template<typename ValueType>
+void XesParser<ValueType>::traverseTraceElement(xercesc::DOMNode const* const node) {
+    std::vector<uint_fast64_t> trace;
     bool isValidTrace = true;
     uint_fast64_t i = 0;
     // traverse children
@@ -118,18 +122,15 @@ void XesParser::traverseTraceElement(xercesc::DOMNode const* const node) {
             } else {
                 isValidTrace = false;
             }
-            trace.addEvent(index);
+            trace.emplace_back(index);
         }
         i++;
     }
-    if (isValidTrace) {
-        trace.setValid(true);
-    }
-    eventLog.addTrace(trace);
-    traceID++;
+    eventLog.addTrace(trace,isValidTrace);
 }
 
-std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) {
+template<typename ValueType>
+std::string XesParser<ValueType>::traverseEventElement(xercesc::DOMNode const* const node) {
     // traverse children
     for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength(); ++i) {
         auto child = node->getChildNodes()->item(i);
@@ -141,7 +142,8 @@ std::string XesParser::traverseEventElement(xercesc::DOMNode const* const node) 
     STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "No string element with conceptName child has been found in a trace in the .xes file");
 }
 
-std::string XesParser::traverseStringElement(xercesc::DOMNode const* const node) {
+template<typename ValueType>
+std::string XesParser<ValueType>::traverseStringElement(xercesc::DOMNode const* const node) {
     for (uint_fast64_t i = 0; i < node->getAttributes()->getLength(); ++i) {
         auto attr = node->getAttributes()->item(i);
         auto name = storm::adapters::getName(attr);    
@@ -152,7 +154,8 @@ std::string XesParser::traverseStringElement(xercesc::DOMNode const* const node)
     STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "No value has been found in the string element in the .xes file");
 }
 
-bool XesParser::isConceptName(xercesc::DOMNode const* const node) {
+template<typename ValueType>
+bool XesParser<ValueType>::isConceptName(xercesc::DOMNode const* const node) {
     for (uint_fast64_t i = 0; i < node->getAttributes()->getLength(); ++i) {
         auto attr = node->getAttributes()->item(i);
         auto name = storm::adapters::getName(attr);    
@@ -163,14 +166,19 @@ bool XesParser::isConceptName(xercesc::DOMNode const* const node) {
     return false;
 }
 
-storm::storage::EventLog& XesParser::getEventLog() {
+template<typename ValueType>
+storm::storage::EventLog<ValueType>& XesParser<ValueType>::getEventLog() {
     return this->eventLog;
 }
 
-
-storm::jani::Model const& XesParser::getModel() {
+template<typename ValueType>
+storm::jani::Model const& XesParser<ValueType>::getModel() {
     return this->model;
 }
+
+template class XesParser<double>;
+template class XesParser<storm::RationalFunction>;
+template class XesParser<storm::RationalNumber>;
 
 } //namespace parser
 } //namespace storm

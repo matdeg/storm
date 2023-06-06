@@ -78,11 +78,11 @@ void Edge::setName(const std::string& name) {
     this->name = name;
 }
 
-double const& Edge::getMass() const {
+storm::expressions::Expression const& Edge::getMass() const {
     return mass;
 }
 
-void Edge::setMass(const double& mass) {
+void Edge::setMass(storm::expressions::Expression const& mass) {
     this->mass = mass;
 }
 

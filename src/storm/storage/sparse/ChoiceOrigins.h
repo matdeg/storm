@@ -7,6 +7,7 @@
 #include <boost/container/flat_set.hpp>
 #include "storm/adapters/JsonForward.h"
 #include "storm/adapters/RationalNumberAdapter.h"
+#include "storm/storage/expressions/Expressions.h"
 
 namespace storm {
 namespace storage {
@@ -103,7 +104,9 @@ class ChoiceOrigins {
 
     virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const;
 
-    virtual double const& getMass(uint_fast64_t k) const;
+    virtual storm::expressions::Expression const& getMass(uint_fast64_t k) const;
+
+    virtual std::string getActionName(uint_fast64_t k) const;
 
    protected:
     ChoiceOrigins(std::vector<uint_fast64_t> const& indexToIdentifierMapping);

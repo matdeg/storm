@@ -676,7 +676,6 @@ storm::jani::Property JaniParser<ValueType>::parseProperty(storm::jani::Model& m
     if (propertyStructure.count("comment") > 0) {
         comment = getString<ValueType>(propertyStructure.at("comment"), "comment for property named '" + name + "'.");
     }
-    std::cout << "MAYBE HERE2\n";
     STORM_LOG_THROW(propertyStructure.count("expression") == 1, storm::exceptions::InvalidJaniException, "Property must have an expression");
     // Parse filter expression.
     Json const& expressionStructure = propertyStructure.at("expression");
