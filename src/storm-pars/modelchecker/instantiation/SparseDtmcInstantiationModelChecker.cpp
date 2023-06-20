@@ -22,7 +22,6 @@ namespace storm {
             auto const& instantiatedModel = modelInstantiator.instantiate(valuation);
             STORM_LOG_THROW(instantiatedModel.getTransitionMatrix().isProbabilistic(), storm::exceptions::InvalidArgumentException, "Instantiation point is invalid as the transition matrix becomes non-stochastic.");
             storm::modelchecker::SparseDtmcPrctlModelChecker<storm::models::sparse::Dtmc<ConstantType>> modelChecker(instantiatedModel);
-
             // Check if there are some optimizations implemented for the specified property
             if (this->currentCheckTask->getFormula().isInFragment(storm::logic::reachability())) {
                 return checkReachabilityProbabilityFormula(env, modelChecker);

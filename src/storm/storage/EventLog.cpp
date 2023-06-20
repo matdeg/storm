@@ -142,6 +142,7 @@ uint_fast64_t EventLog<ValueType>::numberOfValidTraces() {
 template<typename ValueType>
 void EventLog<ValueType>::printInformation() {
     updateTracesLength();
+    ValueType sc = score();
     int n = size();
     int N = totalSize();
     std::cout << "\n------------------------------------\n";
@@ -153,7 +154,7 @@ void EventLog<ValueType>::printInformation() {
     std::cout << "Minimum trace's length : \t" << minLength << "\n";
     std::cout << "Maximum trace's length : \t" << maxLength << "\n";
     std::cout << "Mean length of traces: \t" << meanLength << "\n";
-    std::cout << "score : \t" << score() << "\n";
+    std::cout << "score : \t" << sc << " (approx. " << storm::utility::convertNumber<double>(sc) << ")\n";
     std::cout << "------------------------------------\n";
 }
 

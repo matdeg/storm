@@ -35,6 +35,8 @@ bool parseOptions(const int argc, const char* argv[]);
 
 void processOptions();
 
+void processMathisMode();
+
 void setUrgentOptions();
 }  // namespace cli
 }  // namespace storm

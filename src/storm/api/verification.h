@@ -621,19 +621,19 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithDdEngine(std::shared
 }
 
 template<typename ValueType>
-void verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp) {
-    if constexpr (std::is_same<ValueType,double>::value) {
+std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>, std::shared_ptr<storm::logic::Formula>> verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp) {
+    if constexpr (std::is_same<ValueType,double>::value || std::is_same<ValueType,storm::RationalNumber>::value) {
         storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
-        modelchecker.checkPsl(env, stringPsl);
+        return modelchecker.checkPsl(env, stringPsl);
     } else {
         STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not double");
     }
 }
 
 template<typename ValueType>
-void verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model) {
+std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>, std::shared_ptr<storm::logic::Formula>> verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Model<ValueType>> const& model) {
     if (model->getType() == storm::models::ModelType::Mdp) {
-        verifyPsl(env, stringPsl, model->template as<storm::models::sparse::Mdp<ValueType>>());
+        return verifyPsl(env, stringPsl, model->template as<storm::models::sparse::Mdp<ValueType>>());
     } else {
         STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "Only Mdps are supported");
     }
@@ -645,7 +645,7 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>,std::shared_pt
         storm::modelchecker::TraceMdpModelCheckerPars<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
         return modelchecker.checkPsl(env, stringPsl, parameters);
     } else {
-        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not double");
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not rationalFunction");
     }
 }
 

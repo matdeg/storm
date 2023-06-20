@@ -54,7 +54,11 @@ int64_t process(const int argc, const char** argv) {
         return -1;
     }
 
-    processOptions();
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().isMathisMode()) {
+        processMathisMode();
+    } else {
+        processOptions();
+    }
 
     totalTimer.stop();
     if (storm::settings::getModule<storm::settings::modules::ResourceSettings>().isPrintTimeAndMemorySet()) {
@@ -265,30 +269,6 @@ void processOptions() {
     // Export symbolic input (if requested)
     exportSymbolicInput(symbolicInput);
 
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
-        switch (mpi.verificationValueType) {
-        case ModelProcessingInformation::ValueType::Parametric:
-            {
-                STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Rational Functions are not supported here");
-            }
-            break;
-        case ModelProcessingInformation::ValueType::Exact:
-            {
-                storm::storage::EventLog<storm::RationalNumber> eventLog = parseTraces<storm::RationalNumber>(symbolicInput.model->asJaniModel(), mpi);
-                std::vector<std::string> parameters = parseWeights(symbolicInput);
-                processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalNumber>(symbolicInput, eventLog, mpi);
-            }
-            break;
-        case ModelProcessingInformation::ValueType::FinitePrecision:
-            {
-                storm::storage::EventLog<double> eventLog = parseTraces<double>(symbolicInput.model->asJaniModel(), mpi);
-                std::vector<std::string> parameters = parseWeights(symbolicInput);
-                processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, double>(symbolicInput, eventLog, mpi);
-            }
-            break;
-    }
-    } else {
-
 #ifdef STORM_HAVE_CARL
     switch (mpi.verificationValueType) {
         case ModelProcessingInformation::ValueType::Parametric:
@@ -307,6 +287,101 @@ void processOptions() {
     processInputWithValueType<double>(symbolicInput, mpi);
 #endif
 }
+
+void processMathisMode() {
+    // Start by setting some urgent options (log levels, resources, etc.)
+    setUrgentOptions();
+
+    // Parse symbolic input (PRISM, JANI, properties, etc.)
+    storm::utility::Stopwatch parsingInput(true);
+    SymbolicInput symbolicInput = parseSymbolicInput();
+    parsingInput.stop();
+    std::cout << "Time for parsing input (true) " << parsingInput.getTimeInMilliseconds() << "ms\n";
+
+    // Obtain settings for model processing
+    ModelProcessingInformation mpi;
+    
+    // Preprocess the symbolic input
+    storm::utility::Stopwatch preprocessingWatch(true);
+    std::tie(symbolicInput, mpi) = preprocessSymbolicInput(symbolicInput);
+    preprocessingWatch.stop();
+    std::cout << "Time for Preprocessing " << preprocessingWatch.getTimeInMilliseconds() << "ms\n";
+
+    STORM_LOG_WARN_COND(mpi.isCompatible,
+                        "The model checking query does not seem to be supported for the selected engine. Storm will try to solve the query, but you will most "
+                        "likely get an error for at least one of the provided properties.");
+
+    // Export symbolic input (if requested)
+    storm::utility::Stopwatch exportingWatch(true);
+    exportSymbolicInput(symbolicInput);
+    exportingWatch.stop();
+    std::cout << "Time for exporting " << exportingWatch.getTimeInMilliseconds() << "ms\n";
+
+    std::vector<std::string> parameters = parseWeights(symbolicInput);
+    
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesSet()) {
+        switch (mpi.verificationValueType) {
+            case ModelProcessingInformation::ValueType::Parametric:
+                {
+                    STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Rational Functions are not supported here");
+                }
+                break;
+            case ModelProcessingInformation::ValueType::Exact:
+                {
+                    storm::storage::EventLog<storm::RationalNumber> eventLog = parseTraces<storm::RationalNumber>(symbolicInput.model->asJaniModel(), mpi);
+                    processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, storm::RationalNumber>(symbolicInput, eventLog, mpi);
+                }
+                break;
+            case ModelProcessingInformation::ValueType::FinitePrecision:
+                {
+                    storm::storage::EventLog<double> eventLog = parseTraces<double>(symbolicInput.model->asJaniModel(), mpi);
+                    processTracesInputWithValueTypeAndDdlib<storm::dd::DdType::Sylvan, double>(symbolicInput, eventLog, mpi);
+                }
+                break;
+        }
+    }
+
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasPslExpression()) {
+        
+        switch (mpi.verificationValueType) {
+            case ModelProcessingInformation::ValueType::Parametric:
+                {
+                    STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Rational Functions are not supported here");
+                }
+                break;
+            case ModelProcessingInformation::ValueType::Exact:
+                {
+                    verifyPsl<storm::dd::DdType::Sylvan, storm::RationalNumber>(symbolicInput, mpi);
+                }
+                break;
+            case ModelProcessingInformation::ValueType::FinitePrecision:
+                {
+                    verifyPsl<storm::dd::DdType::Sylvan, double>(symbolicInput, mpi);
+                }
+                break;
+        }
+    }
+
+    if (storm::settings::getModule<storm::settings::modules::IOSettings>().isCtmc()) {
+        switch (mpi.verificationValueType) {
+            case ModelProcessingInformation::ValueType::Parametric:
+                {
+                    STORM_LOG_THROW(false, storm::exceptions::NotSupportedException, "Rational Functions are not supported here");
+                }
+                break;
+            case ModelProcessingInformation::ValueType::Exact:
+                {
+                    verifyAsCtmc<storm::dd::DdType::Sylvan, storm::RationalNumber>(symbolicInput, mpi);
+                }
+                break;
+            case ModelProcessingInformation::ValueType::FinitePrecision:
+                {
+                    verifyAsCtmc<storm::dd::DdType::Sylvan, double>(symbolicInput, mpi);
+                }
+                break;
+        }
+    }
+
 }
 
 void printTimeAndMemoryStatistics(uint64_t wallclockMilliseconds) {

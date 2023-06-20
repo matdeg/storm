@@ -16,8 +16,10 @@ namespace storm {
 namespace settings {
 namespace modules {
 
+
 const std::string IOSettings::moduleName = "io";
 const std::string IOSettings::notTracesOptionName = "not-traces";
+const std::string IOSettings::CtmcOptionName = "ctmc";
 const std::string IOSettings::unionTracesOptionName = "union-traces";
 const std::string IOSettings::limitTracesOptionName = "limit-traces";
 const std::string IOSettings::PslExprOptionName = "psl";
@@ -65,6 +67,7 @@ std::string preventDRNPlaceholderOptionName = "no-drn-placeholders";
 
 IOSettings::IOSettings() : ModuleSettings(moduleName) {
     this->addOption(storm::settings::OptionBuilder(moduleName, mathisModeOptionName, false, "Enables Mathis Mode").build());
+    this->addOption(storm::settings::OptionBuilder(moduleName, CtmcOptionName, false, "Enables interpretation of SLPN as CTMC").build());
     this->addOption(
         storm::settings::OptionBuilder(moduleName, exportDotOptionName, false,
                                        "If given, the loaded model will be written to the specified file in the dot format.")
@@ -77,6 +80,7 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
                     .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, PslExprOptionName, false, "Psl expression to check for SLPN")
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("PslExpr", "Psl Expression").build())
+                    .addArgument(storm::settings::ArgumentBuilder::createStringArgument("Formula", "Formula Expression").build())
                     .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, limitTracesOptionName, false, "limit the number of traces managed by storm")
                     .addArgument(storm::settings::ArgumentBuilder::createUnsignedIntegerArgument("limit", "limit of number of traces").build())
@@ -291,6 +295,10 @@ bool IOSettings::isMathisMode() const {
     return this->getOption(mathisModeOptionName).getHasOptionBeenSet();
 }
 
+bool IOSettings::isCtmc() const {
+    return this->getOption(CtmcOptionName).getHasOptionBeenSet();
+}
+
 
 bool IOSettings::isExportDotSet() const {
     return this->getOption(exportDotOptionName).getHasOptionBeenSet();
@@ -310,6 +318,10 @@ bool IOSettings::hasPslExpression() const {
 
 std::string IOSettings::getPslExpr() const {
     return this->getOption(PslExprOptionName).getArgumentByName("PslExpr").getValueAsString();
+}
+
+std::string IOSettings::getPslFormula() const {
+    return this->getOption(PslExprOptionName).getArgumentByName("Formula").getValueAsString();
 }
 
 

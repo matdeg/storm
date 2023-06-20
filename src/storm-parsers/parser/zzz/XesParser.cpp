@@ -115,22 +115,28 @@ void XesParser<ValueType>::traverseTraceElement(xercesc::DOMNode const* const no
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("event") == 0) {
-            std::string event = traverseEventElement(child);
-            int index = -1;
-            if (getModel().hasAction(event)) {
-                index = getModel().getActionIndex(event);
-            } else {
-                isValidTrace = false;
+            auto p = traverseEventElement(child);
+            if (p) {
+                std::string event = *p;
+                int index = -1;
+                if (getModel().hasAction(event)) {
+                    index = getModel().getActionIndex(event);
+                } else {
+                    isValidTrace = false;
+                }
+                trace.emplace_back(index);
             }
-            trace.emplace_back(index);
         }
         i++;
     }
-    eventLog.addTrace(trace,isValidTrace);
+    if (trace.size() != 0) {
+        eventLog.addTrace(trace,isValidTrace);
+    }
+    
 }
 
 template<typename ValueType>
-std::string XesParser<ValueType>::traverseEventElement(xercesc::DOMNode const* const node) {
+boost::optional<std::string> XesParser<ValueType>::traverseEventElement(xercesc::DOMNode const* const node) {
     // traverse children
     for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength(); ++i) {
         auto child = node->getChildNodes()->item(i);
@@ -139,7 +145,7 @@ std::string XesParser<ValueType>::traverseEventElement(xercesc::DOMNode const* c
             return traverseStringElement(child);
         }
     }
-    STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "No string element with conceptName child has been found in a trace in the .xes file");
+    return boost::none;
 }
 
 template<typename ValueType>

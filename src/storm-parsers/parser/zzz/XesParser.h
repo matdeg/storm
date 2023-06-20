@@ -30,7 +30,7 @@ class XesParser {
 
     void traverseProjectElement(xercesc::DOMNode const* const node);
     void traverseTraceElement(xercesc::DOMNode const* const node);
-    std::string traverseEventElement(xercesc::DOMNode const* const node);
+    boost::optional<std::string> traverseEventElement(xercesc::DOMNode const* const node);
     std::string traverseStringElement(xercesc::DOMNode const* const node);
     bool isConceptName(xercesc::DOMNode const* const node);
 

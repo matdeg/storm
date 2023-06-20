@@ -36,12 +36,13 @@
 #include "storm/modelchecker/prctl/helper/rewardbounded/QuantileHelper.h"
 
 #include "storm/storage/EventLog.h"
+#include "storm/storage/StronglyConnectedComponentDecomposition.h"
+#include "storm/storage/expressions/Expressions.h"
 
 #include "storm/solver/SolveGoal.h"
 
 #include "storm/exceptions/InvalidPropertyException.h"
 #include "storm/exceptions/InvalidStateException.h"
-#include "storm/storage/expressions/Expressions.h"
 
 #include "storm/exceptions/InvalidPropertyException.h"
 
@@ -82,13 +83,10 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
     spot::print_hoa(autStream, aut, "is");
     storm::automata::DeterministicAutomaton::ptr da = storm::automata::DeterministicAutomaton::parse(autStream);
 
-    da->printHOA(std::cout);
-
     storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);
     SparseMdpModelType const& model = this->getModel(); 
     auto transitionMatrix = model.getTransitionMatrix();
     uint_fast64_t initialStateAutomaton = da->getInitialState();
-    std::cout << transitionMatrix << "\n\n";
     std::deque<std::pair<StateType,uint_fast64_t>> statesToExploreTrace;
     for (auto a : model.getInitialStates()) {
         std::pair<StateType,uint_fast64_t> k (a,initialStateAutomaton);
@@ -202,6 +200,7 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
         currentRow++;
     }
 
+    transitionMatrix = transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount());
     storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilderTrace.getCurrentRowGroupCount());
     for (std::string s : stateLabels.getLabels()) {
         newStateLabels.addLabel(s);
@@ -212,7 +211,6 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
     for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
         uint_fast64_t state = it->first.first;
         uint_fast64_t automatonState = it->first.second;
-        std::cout << "(" << state << "," << automatonState << ") is mapped to " << it->second << "\n";
         auto labels = stateLabels.getLabelsOfState(state);
         for (std::string s : labels) {
             if (s == "init") {
@@ -231,25 +229,85 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
         }
     }
 
-    newStateLabels.printCompleteLabelingInformationToStream();
+    storm::storage::StronglyConnectedComponentDecomposition<ValueType> bottomSccs(transitionMatrix, storage::StronglyConnectedComponentDecompositionOptions().onlyBottomSccs().dropNaiveSccs());
+    storm::storage::BitVector acceptingStates(transitionMatrix.getRowGroupCount(), false);
+
+    std::size_t checkedBSCCs = 0, acceptingBSCCs = 0, acceptingBSCCStates = 0;
+    for (auto& scc : bottomSccs) {
+        checkedBSCCs++;
+        if (isAccepting(*da->getAcceptance()->getAcceptanceExpression(), newStateLabels, scc)) {
+            acceptingBSCCs++;
+            for (auto& state : scc) {
+                acceptingStates.set(state);
+                acceptingBSCCStates++;
+            }
+        }
+    }
+
+    newStateLabels.addLabel("accepting");
+    for (auto state : acceptingStates) {
+        newStateLabels.addLabelToState("accepting", state);
+    }
 
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
-        transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount()), newStateLabels,
+        transitionMatrix, newStateLabels,
         std::unordered_map<std::string, RewardModelType>());
     modelComponents.transitionMatrix.makeRowGroupingTrivial();
-    std::cout << modelComponents.transitionMatrix << "\n";
+    auto dtmc = std::make_shared<storm::models::sparse::Dtmc<ValueType, RewardModelType>>(std::move(modelComponents));
 
-    std::shared_ptr<storm::logic::Formula> formula = buildFormulaFromAcceptance(*da->getAcceptance()->getAcceptanceExpression());
-    std::cout << *formula << "\n";
-
-    return std::make_pair(std::make_shared<storm::models::sparse::Dtmc<ValueType, RewardModelType>>(std::move(modelComponents)), formula);
-
-    
-
-
+    auto acceptingFormula = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula("accepting"));
+    auto formula = std::make_shared<storm::logic::EventuallyFormula>(storm::logic::EventuallyFormula(acceptingFormula));
+    return std::make_pair(dtmc,formula);
 
 }
 
+template<typename SparseMdpModelType>
+bool TraceMdpModelCheckerPars<SparseMdpModelType>::isAccepting(cpphoafparser::HOAConsumer::acceptance_expr& accExpr, storm::models::sparse::StateLabeling const& stateLabeling, const storm::storage::StateBlock& scc) {
+    switch (accExpr.getType()) {
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_AND:
+            return isAccepting(*accExpr.getLeft(), stateLabeling, scc) && isAccepting(*accExpr.getRight(), stateLabeling, scc);
+            break;
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_OR:
+            return isAccepting(*accExpr.getLeft(), stateLabeling, scc) || isAccepting(*accExpr.getRight(), stateLabeling, scc);            
+            break;
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_NOT:
+            return !isAccepting(*accExpr.getLeft(), stateLabeling, scc);
+            break;
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_TRUE:
+            return true;
+            break;
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_FALSE:
+            return false;
+            break;
+        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_ATOM:
+            const cpphoafparser::AtomAcceptance& atom = accExpr.getAtom();
+            storm::storage::BitVector const& acceptanceSet = stateLabeling.getStates(std::to_string(atom.getAcceptanceSet()));
+            bool negated = atom.isNegated();
+            bool rv;
+            switch (atom.getType()) {
+                case cpphoafparser::AtomAcceptance::TEMPORAL_INF:
+                    rv = false;
+                    for (auto& state : scc) {
+                        if (acceptanceSet.get(state)) {
+                            rv = true;
+                            break;
+                        }
+                    }
+                    break;
+                case cpphoafparser::AtomAcceptance::TEMPORAL_FIN:
+                    rv = true;
+                    for (auto& state : scc) {
+                        if (acceptanceSet.get(state)) {
+                            rv = false;
+                            break;
+                        }
+                    }
+                    break;
+            }
+            return (negated ? !rv : rv);
+    }
+    STORM_LOG_THROW(false,storm::exceptions::InvalidPropertyException, "unexpected acceptance expression");
+}
 
 
 template<typename SparseMdpModelType>

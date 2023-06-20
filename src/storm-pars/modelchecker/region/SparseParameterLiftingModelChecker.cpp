@@ -238,7 +238,6 @@ namespace storm {
             STORM_LOG_THROW(this->parametricModel->getInitialStates().getNumberOfSetBits() == 1, storm::exceptions::NotSupportedException, "Getting extremal values at the initial state requires a model with a single initial state.");
             bool const useMonotonicity = this->isUseMonotonicitySet();
             bool const minimize = storm::solver::minimize(dir);
-
             // Comparator for the region queue
             auto cmp = storm::solver::minimize(dir) ?
                        [](RegionBound<SparseModelType, ConstantType> const& lhs, RegionBound<SparseModelType, ConstantType> const& rhs) { return lhs.bound > rhs.bound; } :
@@ -274,7 +273,6 @@ namespace storm {
             } else {
                 regionQueue.emplace(region, nullptr, nullptr, initBound);
             }
-
             // The results
             boost::optional<ConstantType> value;
             Valuation valuation;
@@ -603,7 +601,6 @@ namespace storm {
                 valuation = region.getCenterPoint();
             }
             value = getInstantiationChecker().check(env, valuation)->template asExplicitQuantitativeCheckResult<ConstantType>()[*this->parametricModel->getInitialStates().begin()];
-
             return std::make_pair(storm::utility::convertNumber<typename SparseModelType::ValueType>(value), std::move(valuation));
         }
 

@@ -1047,35 +1047,29 @@ namespace storm {
 
         template <storm::dd::DdType DdType, typename ValueType>
         void verifyPsl(SymbolicInput& input, storm::cli::ModelProcessingInformation const& mpi, std::vector<std::string> parameters, std::shared_ptr<storm::models::ModelBase> preModel) {
-            auto ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
-            auto buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
-            auto parSettings = storm::settings::getModule<storm::settings::modules::ParametricSettings>();
-            auto monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
-            auto RegionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
+            auto const& ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+            auto const& buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
+            auto const& parSettings = storm::settings::getModule<storm::settings::modules::ParametricSettings>();
+            auto const& monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
+            auto const& RegionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
 
             std::string stringPsl = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslExpr();
+            std::string stringPslFormula = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslFormula();
+            auto fpars = storm::parser::FormulaParser();
+            auto f = fpars.parseSingleFormulaFromString(stringPslFormula);
+            auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+            std::set<storm::expressions::Variable> emptySet;
+            storm::jani::Property prop(stringPslFormula, f, emptySet);
+            input.properties.emplace_back(prop);
+
+
+
+
             auto sparseModel = preModel->as<storm::models::sparse::Model<ValueType>>();
             std::pair<std::shared_ptr<storm::models::ModelBase>,std::shared_ptr<storm::logic::Formula>> pair = storm::api::buildPslModel<ValueType>(mpi.env, stringPsl, sparseModel, parameters);
             std::shared_ptr<storm::models::ModelBase> model = pair.first;
-            std::shared_ptr<storm::logic::Formula> formula = pair.second;
-
             model->printModelInformationToStream(std::cout);
-            auto& expressionManager = input.model->asJaniModel().getExpressionManager();
-            std::set<storm::expressions::Variable> emptySet;
-
-
-            if (!RegionSettings.isRegionSet()) {
-                auto probFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula);
-                storm::jani::Property prop("P=? Psl", probFormula, emptySet);
-                input.properties.emplace_back(prop);
-            } else {
-                storm::logic::Bound bound(storm::logic::ComparisonType::Less, expressionManager.rational(0.2));
-                storm::logic::OperatorInformation operatorInformation(boost::none, bound);
-                auto probFormula2 = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula, operatorInformation);
-                storm::jani::Property prop2("Psl P<0.2", probFormula2, emptySet);
-                input.properties.emplace_back(prop2);
-            }
-
+            
             // If minimization is active and the model is parametric, parameters might be minimized away because they are inconsequential.
             // This is the set of all such inconsequential parameters.
             std::set<RationalFunctionVariable> omittedParameters;
@@ -1139,6 +1133,7 @@ namespace storm {
                 }
 // TODO: is onlyGlobalSet was used here
                 verifyParametricModel<DdType, ValueType>(model, input, regions, samples, storm::api::MonotonicitySetting(parSettings.isUseMonotonicitySet(), false, monSettings.isUsePLABoundsSet()), monotoneParameters, monSettings.getMonotonicityThreshold(), omittedParameters);
+
                 input.properties.clear();
             }
         }

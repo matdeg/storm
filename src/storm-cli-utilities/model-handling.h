@@ -4,6 +4,7 @@
 
 #include "storm-counterexamples/api/counterexamples.h"
 #include "storm-parsers/api/storm-parsers.h"
+#include "storm-parsers/parser/FormulaParser.h"
 
 #include "storm/io/file.h"
 #include "storm/utility/AutomaticSettings.h"
@@ -1431,13 +1432,45 @@ std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildModelAsCtmc(storm::
     }
 }
 
+template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>
+void verifyPsl(SymbolicInput& input, ModelProcessingInformation const& mpi) {
+    std::shared_ptr<storm::models::ModelBase> preModel = buildPreprocessExportModelWithValueTypeAndDdlib<DdType, BuildValueType, VerificationValueType>(input, mpi);
+    auto sparseModel = preModel->as<storm::models::sparse::Model<VerificationValueType>>();
+    storm::utility::Stopwatch PslWatch(true);
+    std::string stringPsl = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslExpr();
+    std::string stringPslFormula = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslFormula();
+    auto fpars = storm::parser::FormulaParser();
+    auto f = fpars.parseSingleFormulaFromString(stringPslFormula);
+    auto& expressionManager = input.model->asJaniModel().getExpressionManager();
+    std::set<storm::expressions::Variable> emptySet;
+    storm::jani::Property prop(stringPslFormula, f, emptySet);
+    input.properties.emplace_back(prop);
+    std::pair<std::shared_ptr<storm::models::ModelBase>,std::shared_ptr<storm::logic::Formula>> pair = storm::api::verifyPsl<VerificationValueType>(mpi.env, stringPsl, sparseModel);
+    auto model = pair.first;
+    verifyModel<DdType, VerificationValueType>(model, input, mpi);
+    input.properties.pop_back();
+    PslWatch.stop();
+    std::cout << "Time for Psl Formula Verification : " << PslWatch.getTimeInMilliseconds() << "ms\n";
+}
+
+template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>
+void verifyAsCtmc(SymbolicInput& input, ModelProcessingInformation const& mpi) {
+    std::shared_ptr<storm::models::ModelBase> preModel = buildPreprocessExportModelWithValueTypeAndDdlib<DdType, BuildValueType, VerificationValueType>(input, mpi);
+    auto sparseModel = preModel->as<storm::models::sparse::Model<VerificationValueType>>();
+    storm::utility::Stopwatch CtmcWatch(true);
+    std::shared_ptr<storm::models::ModelBase> model = buildModelAsCtmc(mpi.env,sparseModel);
+    verifyModel<DdType, VerificationValueType>(model, input, mpi);
+    CtmcWatch.stop();
+    std::cout << "Time for SLPN (Ctmc) Verification : " << CtmcWatch.getTimeInMilliseconds() << "ms\n";
+}
 
 template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>
 void processTracesInputWithValueTypeAndDdlib(SymbolicInput& input, storm::storage::EventLog<BuildValueType> eventLog, ModelProcessingInformation const& mpi) {
     std::shared_ptr<storm::models::ModelBase> preModel = buildPreprocessExportModelWithValueTypeAndDdlib<DdType, BuildValueType, VerificationValueType>(input, mpi);
     auto& expressionManager = input.model->asJaniModel().getExpressionManager();
     auto sparseModel = preModel->as<storm::models::sparse::Model<VerificationValueType>>();
-     for (auto trace : eventLog.getTraces()) {
+    storm::utility::Stopwatch eventLogWatch(true);
+    for (auto trace : eventLog.getTraces()) {
         auto id = eventLog.getId(trace);
         std::shared_ptr<storm::models::ModelBase> model = buildProductTraceModelAsCtmc(mpi.env,sparseModel, eventLog, trace);
         auto rightFormula = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula("final"));
@@ -1447,24 +1480,10 @@ void processTracesInputWithValueTypeAndDdlib(SymbolicInput& input, storm::storag
         auto result = storm::api::verifyWithSparseEngine<VerificationValueType>(mpi.env, model->as<storm::models::sparse::Model<VerificationValueType>>(), task);
         eventLog.addProbability(result->template asExplicitQuantitativeCheckResult<VerificationValueType>()[0]);
     } 
-    eventLog.printDetailledInformation();
-    std::shared_ptr<storm::models::ModelBase> model = buildModelAsCtmc(mpi.env,sparseModel);
-
-    for (auto p : input.properties) {
-        std::cout << p << "\n";
-        auto task = storm::api::createTask<VerificationValueType>(p.getRawFormula(), true);
-        auto result = storm::api::verifyWithSparseEngine<VerificationValueType>(mpi.env, model->as<storm::models::sparse::Model<VerificationValueType>>(), task);
-        std::cout << result->template asExplicitQuantitativeCheckResult<VerificationValueType>() << "\n";
-    }
-
-    if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasPslExpression()) {
-        std::string stringPsl = storm::settings::getModule<storm::settings::modules::IOSettings>().getPslExpr();
-        storm::api::verifyPsl<VerificationValueType>(mpi.env, stringPsl, sparseModel);
-    }
+    eventLog.printInformation();
+    eventLogWatch.stop();
+    std::cout << "Time for Event-log related Verification : " << eventLogWatch.getTimeInMilliseconds() << "ms, which means " << eventLogWatch.getTimeInMilliseconds()/eventLog.size() << "ms per trace\n";
     
-    
-
-     
 }
 
 template<storm::dd::DdType DdType, typename BuildValueType, typename VerificationValueType = BuildValueType>

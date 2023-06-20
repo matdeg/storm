@@ -5,6 +5,7 @@
 #include "storm/models/sparse/Mdp.h"
 #include "storm/solver/MinMaxLinearEquationSolver.h"
 #include "storm/storage/EventLog.h"
+#include "storm/storage/StronglyConnectedComponentDecomposition.h"
 #include "cpphoafparser/consumer/hoa_consumer.hh"
 #include "storm/models/sparse/Dtmc.h"
 #include "storm/models/sparse/Ctmc.h"
@@ -22,6 +23,7 @@ class TraceMdpModelCheckerPars : public SparsePropositionalModelChecker<SparseMd
     typedef typename SparseMdpModelType::RewardModelType RewardModelType;
 
     explicit TraceMdpModelCheckerPars(SparseMdpModelType const& model);
+    bool isAccepting(cpphoafparser::HOAConsumer::acceptance_expr& accExpr, storm::models::sparse::StateLabeling const& stateLabeling, const storm::storage::StateBlock& scc);
     std::shared_ptr<storm::logic::Formula> buildFormulaFromAcceptance(cpphoafparser::HOAConsumer::acceptance_expr& accExpr) ;
     std::shared_ptr<storm::models::sparse::Dtmc<ValueType>> buildProductAsDtmc(Environment const& env, std::vector<uint_fast64_t> const trace, std::vector<std::string> const& parameters);
     std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildProductAsCtmc(Environment const& env, std::vector<uint_fast64_t> const trace, std::vector<std::string> const& parameters);
