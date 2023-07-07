@@ -81,6 +81,7 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
     spot::twa_graph_ptr aut = trans.run(pf.f);
     std::stringstream autStream;
     spot::print_hoa(autStream, aut, "is");
+    spot::print_hoa(std::cout, aut, "is");
     storm::automata::DeterministicAutomaton::ptr da = storm::automata::DeterministicAutomaton::parse(autStream);
 
     storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);

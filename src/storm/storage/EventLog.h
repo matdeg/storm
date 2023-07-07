@@ -20,7 +20,7 @@ class EventLog {
     uint_fast64_t size() const;
     uint_fast64_t totalSize() const;
     uint_fast64_t getId(std::vector<uint_fast64_t> trace) ;
-    void addProbability(ValueType p);
+    void addProbability(ValueType p, int id);
     uint_fast64_t getTraceCount(std::vector<uint_fast64_t> trace) ; 
     bool isValid(uint_fast64_t id) const;
     void printInformation() ;

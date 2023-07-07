@@ -1478,9 +1478,14 @@ void processTracesInputWithValueTypeAndDdlib(SymbolicInput& input, storm::storag
         auto probFormula = std::make_shared<storm::logic::ProbabilityOperatorFormula>(formula);
         auto task = storm::api::createTask<VerificationValueType>(probFormula, true);
         auto result = storm::api::verifyWithSparseEngine<VerificationValueType>(mpi.env, model->as<storm::models::sparse::Model<VerificationValueType>>(), task);
-        eventLog.addProbability(result->template asExplicitQuantitativeCheckResult<VerificationValueType>()[0]);
+        eventLog.addProbability(result->template asExplicitQuantitativeCheckResult<VerificationValueType>()[0],id);
     } 
-    eventLog.printInformation();
+    if (eventLog.size() > 10) {
+        eventLog.printInformation();
+    } else {
+        eventLog.printDetailledInformation();
+    }
+    
     eventLogWatch.stop();
     std::cout << "Time for Event-log related Verification : " << eventLogWatch.getTimeInMilliseconds() << "ms, which means " << eventLogWatch.getTimeInMilliseconds()/eventLog.size() << "ms per trace\n";
     

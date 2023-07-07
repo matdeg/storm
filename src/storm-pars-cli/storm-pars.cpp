@@ -1137,6 +1137,86 @@ namespace storm {
                 input.properties.clear();
             }
         }
+
+        template <storm::dd::DdType DdType, typename ValueType>
+        void verifyAsCtmc(SymbolicInput& input, storm::cli::ModelProcessingInformation const& mpi, std::vector<std::string> parameters, std::shared_ptr<storm::models::ModelBase> preModel) {
+            auto const& ioSettings = storm::settings::getModule<storm::settings::modules::IOSettings>();
+            auto const& buildSettings = storm::settings::getModule<storm::settings::modules::BuildSettings>();
+            auto const& parSettings = storm::settings::getModule<storm::settings::modules::ParametricSettings>();
+            auto const& monSettings = storm::settings::getModule<storm::settings::modules::MonotonicitySettings>();
+            auto const& RegionSettings = storm::settings::getModule<storm::settings::modules::RegionSettings>();
+
+            auto sparseModel = preModel->as<storm::models::sparse::Model<ValueType>>();
+            std::shared_ptr<storm::models::ModelBase> model = storm::cli::buildModelAsCtmc(mpi.env,sparseModel);
+            model->printModelInformationToStream(std::cout);
+            
+            // If minimization is active and the model is parametric, parameters might be minimized away because they are inconsequential.
+            // This is the set of all such inconsequential parameters.
+            std::set<RationalFunctionVariable> omittedParameters;
+            if (model) {
+                auto preprocessingResult = storm::pars::preprocessModel<DdType, ValueType>(model, input, mpi);
+                if (preprocessingResult.changed) {
+                    if (model->isOfType(models::ModelType::Dtmc) || model->isOfType(models::ModelType::Mdp)) {
+                        auto const previousParams = storm::models::sparse::getAllParameters(*model->template as<storm::models::sparse::Model<ValueType>>());
+                        auto const currentParams = storm::models::sparse::getAllParameters(*(preprocessingResult.model)->template as<storm::models::sparse::Model<ValueType>>());
+                        for (auto const& variable : previousParams) {
+                            if (!currentParams.count(variable)) {
+                                omittedParameters.insert(variable);
+                            }
+                        }
+                    }
+                    model = preprocessingResult.model;
+
+                    if (preprocessingResult.formulas) {
+                        std::vector<storm::jani::Property> newProperties;
+                        for (size_t i = 0; i < preprocessingResult.formulas.get().size(); ++i) {
+                            auto formula = preprocessingResult.formulas.get().at(i);
+                            STORM_LOG_ASSERT(i < input.properties.size(), "Index " << i << " greater than number of properties.");
+                            storm::jani::Property property = input.properties.at(i);
+                            newProperties.push_back(storm::jani::Property(property.getName(), formula, property.getUndefinedConstants(), property.getComment()));
+                        }
+                        input.properties = newProperties;
+                    }
+
+                    model->printModelInformationToStream(std::cout);
+                }
+            }
+            std::vector<storm::storage::ParameterRegion<ValueType>> regions = parseRegions<ValueType>(model);
+
+            std::string samplesAsString = parSettings.getSamples();
+            SampleInformation<ValueType> samples;
+            if (!samplesAsString.empty()) {
+                samples = parseSamples<ValueType>(model, samplesAsString,
+                                                parSettings.isSamplesAreGraphPreservingSet());
+                samples.exact = parSettings.isSampleExactSet();
+            }
+            if (model) {
+                storm::cli::exportModel<DdType, ValueType>(model, input);
+            }
+
+            if (parSettings.onlyObtainConstraints()) {
+                STORM_LOG_THROW(parSettings.exportResultToFile(), storm::exceptions::InvalidSettingsException,
+                                "When computing constraints, export path has to be specified.");
+                storm::api::exportParametricResultToFile<ValueType>(boost::none,
+                                                                    storm::analysis::ConstraintCollector<ValueType>(
+                                                                            *(model->as<storm::models::sparse::Model<ValueType>>())),
+                                                                    parSettings.exportResultPath());
+                return;
+            }
+
+            if (model) {
+                boost::optional<std::pair<std::set<storm::RationalFunctionVariable>, std::set<storm::RationalFunctionVariable>>> monotoneParameters;
+                if (monSettings.isMonotoneParametersSet()) {
+                    monotoneParameters = std::move(
+                            storm::api::parseMonotoneParameters<ValueType>(monSettings.getMonotoneParameterFilename(),
+                                    model->as<storm::models::sparse::Model<ValueType>>()));
+                }
+// TODO: is onlyGlobalSet was used here
+                verifyParametricModel<DdType, ValueType>(model, input, regions, samples, storm::api::MonotonicitySetting(parSettings.isUseMonotonicitySet(), false, monSettings.isUsePLABoundsSet()), monotoneParameters, monSettings.getMonotonicityThreshold(), omittedParameters);
+
+                input.properties.clear();
+            }
+        }
         
 
         template <storm::dd::DdType DdType, typename ValueType>
@@ -1256,6 +1336,10 @@ namespace storm {
 
             if (storm::settings::getModule<storm::settings::modules::IOSettings>().hasPslExpression()) {
                 verifyPsl<storm::dd::DdType::Sylvan, storm::RationalFunction>(input, mpi, parameters, preModel);
+            }
+
+            if (storm::settings::getModule<storm::settings::modules::IOSettings>().isCtmc()) {
+                verifyAsCtmc<storm::dd::DdType::Sylvan, storm::RationalFunction>(input, mpi, parameters, preModel);
             }
         }
 

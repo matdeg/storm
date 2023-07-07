@@ -42,7 +42,7 @@ void EventLog<ValueType>::updateTracesLength() {
     for (int k = 1; k < maxLength + 1; k++) {
         sumLengths += k * tracesLength[k];
     }
-    meanLength = sumLengths/(double)size();
+    meanLength = sumLengths/(double)totalSize();
 }
 
 template<typename ValueType>
@@ -56,8 +56,11 @@ uint_fast64_t EventLog<ValueType>::getId(std::vector<uint_fast64_t> trace) {
 }
 
 template<typename ValueType>
-void EventLog<ValueType>::addProbability(ValueType p) {
-    this->tracesProbability.emplace_back(p);
+void EventLog<ValueType>::addProbability(ValueType p, int id) {
+    if (id >= this->tracesProbability.size()) {
+        this->tracesProbability.resize(id + 1);
+    }
+    this->tracesProbability[id] = p;
 }
 
 template<typename ValueType>
@@ -91,23 +94,23 @@ template<typename ValueType>
 ValueType EventLog<ValueType>::score(){
     int N = totalSize();
     if constexpr (std::is_same<ValueType,double>::value) {
-        ValueType sc = 1;
+        ValueType sc = 0;
         for (int k = 0; k < size(); k++) {
-            sc += fabs(tracesProbability[k] - (double)tracesCount[idToTrace[k]]/(double)N) - tracesProbability[k];
+            sc += std::max((double)tracesCount[idToTrace[k]]/(double)N - tracesProbability[k],0.0);
         }
-        return sc/2;
+        return sc;
     } else if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {
         STORM_LOG_THROW(false,storm::exceptions::OptionParserException, "score cannot be computed with Rational Functions");
     } else if constexpr (std::is_same<ValueType,storm::RationalNumber>::value) { 
-        ValueType sc = 1;
+        ValueType sc = 0;
         for (int k = 0; k < size(); k++) {
-            if (tracesProbability[k] > (double)tracesCount[idToTrace[k]]/(double)N) {
-                sc -= (double)tracesCount[idToTrace[k]]/(double)N;
-            } else {
-                sc += (double)tracesCount[idToTrace[k]]/(double)N - 2*tracesProbability[k];
+            ValueType a = tracesCount[idToTrace[k]];
+            ValueType b = N;
+            if (tracesProbability[k] < a/b) {
+                sc += a/b - tracesProbability[k];
             }
         }
-        return sc/2;
+        return sc;
     }
 }
 
