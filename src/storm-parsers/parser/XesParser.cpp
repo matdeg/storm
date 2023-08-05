@@ -71,9 +71,6 @@ storm::storage::EventLog<ValueType>& XesParser<ValueType>::parseXesTraces(std::s
     // build gspn by traversing the DOM object
     parser->getDocument()->normalizeDocument();
     xercesc::DOMElement* elementRoot = parser->getDocument()->getDocumentElement();
-    if(storm::settings::getModule<storm::settings::modules::IOSettings>().hasTracesLimit()) {
-        limit = storm::settings::getModule<storm::settings::modules::IOSettings>().getTracesLimit();
-    }
     if (storm::adapters::XMLtoString(elementRoot->getTagName()) == "log") {
         traverseProjectElement(elementRoot);
         modelParsingWatch.stop();
@@ -96,7 +93,7 @@ storm::storage::EventLog<ValueType>& XesParser<ValueType>::parseXesTraces(std::s
 template<typename ValueType>
 void XesParser<ValueType>::traverseProjectElement(xercesc::DOMNode const* const node) {
     // traverse children
-    for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength() && traceID < limit; ++i) {
+    for (uint_fast64_t i = 0; i < node->getChildNodes()->getLength(); ++i) {
         auto child = node->getChildNodes()->item(i);
         auto name = storm::adapters::getName(child);
         if (name.compare("trace") == 0) {
@@ -183,7 +180,6 @@ storm::jani::Model const& XesParser<ValueType>::getModel() {
 }
 
 template class XesParser<double>;
-template class XesParser<storm::RationalFunction>;
 template class XesParser<storm::RationalNumber>;
 
 } //namespace parser

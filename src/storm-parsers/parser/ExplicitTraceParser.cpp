@@ -60,7 +60,6 @@ storm::jani::Model const& ExplicitTraceParser<ValueType>::getModel() {
 }
 
 template class ExplicitTraceParser<double>;
-template class ExplicitTraceParser<storm::RationalFunction>;
 template class ExplicitTraceParser<storm::RationalNumber>;
 
 } //namespace parser

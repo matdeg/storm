@@ -238,6 +238,7 @@ namespace storm {
             STORM_LOG_THROW(this->parametricModel->getInitialStates().getNumberOfSetBits() == 1, storm::exceptions::NotSupportedException, "Getting extremal values at the initial state requires a model with a single initial state.");
             bool const useMonotonicity = this->isUseMonotonicitySet();
             bool const minimize = storm::solver::minimize(dir);
+
             // Comparator for the region queue
             auto cmp = storm::solver::minimize(dir) ?
                        [](RegionBound<SparseModelType, ConstantType> const& lhs, RegionBound<SparseModelType, ConstantType> const& rhs) { return lhs.bound > rhs.bound; } :

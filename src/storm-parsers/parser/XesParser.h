@@ -39,7 +39,6 @@ class XesParser {
 
    private:
     // the constructed Traces
-    int limit = std::numeric_limits<int>::max();
     storm::storage::EventLog<ValueType> eventLog;
     storm::jani::Model model;
     uint_fast64_t traceID = 0;

@@ -5,6 +5,9 @@
 #include "storm-counterexamples/api/counterexamples.h"
 #include "storm-parsers/api/storm-parsers.h"
 #include "storm-parsers/parser/FormulaParser.h"
+#include "storm-parsers/parser/XesParser.h"
+#include "storm-parsers/parser/ExplicitTraceParser.h"
+#include "storm-parsers/parser/ExpressionParser.h"
 
 #include "storm/io/file.h"
 #include "storm/utility/AutomaticSettings.h"
@@ -51,9 +54,7 @@
 #include "storm/storage/jani/localeliminator/AutomaticAction.h"
 #include "storm/storage/jani/localeliminator/JaniLocalEliminator.h"
 
-#include "storm-parsers/parser/zzz/XesParser.h"
-#include "storm-parsers/parser/ExplicitTraceParser.h"
-#include "storm-parsers/parser/ExpressionParser.h"
+
 
 #include "storm/utility/Stopwatch.h"
 
