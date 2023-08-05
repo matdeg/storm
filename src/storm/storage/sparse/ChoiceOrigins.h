@@ -100,7 +100,7 @@ class ChoiceOrigins {
 
     virtual std::size_t hash() const = 0;
 
-    virtual std::vector<uint_fast64_t> const testFunction(uint_fast64_t k) const;
+    virtual std::vector<uint_fast64_t> const getEdgeIndexVect(uint_fast64_t k) const;
 
     virtual std::vector<uint_fast64_t> const edgeIndexToActionIndex() const;
 

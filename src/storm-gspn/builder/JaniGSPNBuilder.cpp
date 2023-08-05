@@ -12,7 +12,6 @@
 namespace storm {
 namespace builder {
 
-
 storm::jani::Model* JaniGSPNBuilder::build(std::string const& automatonName) {
     storm::jani::ModelType modelType = storm::jani::ModelType::MA;
     if (gspn.getNumberOfTimedTransitions() == 0) {

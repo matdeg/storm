@@ -24,7 +24,6 @@ class TraceMdpModelChecker : public SparsePropositionalModelChecker<SparseMdpMod
 
     explicit TraceMdpModelChecker(SparseMdpModelType const& model);
     bool isAccepting(cpphoafparser::HOAConsumer::acceptance_expr& accExpr, storm::models::sparse::StateLabeling const& stateLabeling, const storm::storage::StateBlock& scc);
-    std::shared_ptr<storm::logic::Formula> buildFormulaFromAcceptance(cpphoafparser::HOAConsumer::acceptance_expr& accExpr) ;
     std::shared_ptr<storm::models::sparse::Dtmc<ValueType>> buildProductAsDtmc(Environment const& env, std::vector<uint_fast64_t> const trace);
     std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildProductAsCtmc(Environment const& env, std::vector<uint_fast64_t> const trace);
     std::shared_ptr<storm::models::sparse::Ctmc<ValueType>> buildAsCtmc(Environment const& env);

@@ -356,7 +356,6 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithSparseEngine(std::sh
     return verifyWithSparseEngine(env, model, task);
 }
 
-
 template<typename ValueType>
 std::unique_ptr<storm::modelchecker::CheckResult> computeSteadyStateDistributionWithSparseEngine(
     storm::Environment const& env, std::shared_ptr<storm::models::sparse::Dtmc<ValueType>> const& dtmc) {
@@ -620,13 +619,14 @@ std::unique_ptr<storm::modelchecker::CheckResult> verifyWithDdEngine(std::shared
     return verifyWithDdEngine(env, model, task);
 }
 
+// Given a PSL formula (string) and a DTMC, return the product DTMC and an equivalent reachability condition (do not work for rational functions)
 template<typename ValueType>
 std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>, std::shared_ptr<storm::logic::Formula>> verifyPsl(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp) {
     if constexpr (std::is_same<ValueType,double>::value || std::is_same<ValueType,storm::RationalNumber>::value) {
         storm::modelchecker::TraceMdpModelChecker<storm::models::sparse::Mdp<ValueType>> modelchecker(*mdp);
         return modelchecker.checkPsl(env, stringPsl);
     } else {
-        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL if not double");
+        STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "can't verify PSL with Rational Functions");
     }
 }
 
@@ -639,6 +639,7 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>, std::shared_p
     }
 }
 
+// Given a PSL formula (string), DTMC, and parameters, return the product DTMC and an equivalent reachability condition (works only for rational functions)
 template<typename ValueType>
 std::pair<std::shared_ptr<storm::models::sparse::Dtmc<ValueType>>,std::shared_ptr<storm::logic::Formula>> buildPslModel(storm::Environment const& env, std::string stringPsl, std::shared_ptr<storm::models::sparse::Mdp<ValueType>> const& mdp, std::vector<std::string> parameters) {
     if constexpr (std::is_same<ValueType,storm::RationalFunction>::value) {

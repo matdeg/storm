@@ -32,6 +32,7 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
 
     auto errHandler = (xercesc::ErrorHandler*)new xercesc::HandlerBase();
     parser->setErrorHandler(errHandler);
+
     // parse file
 
     bool isSlpn = (filename.substr(filename.length()-4,4) == "slpn");
@@ -62,8 +63,7 @@ storm::gspn::GSPN* GspnParser::parse(std::string const& filename, std::string co
         // Error occurred while parsing the file. Abort constructing the gspn since the input file is not valid
         // or the parser run into a problem.
         STORM_LOG_THROW(false, storm::exceptions::UnexpectedException, "Failed to parse pnml file.\n");
-    } 
-    
+    }
 
     // build gspn by traversing the DOM object
     parser->getDocument()->normalizeDocument();

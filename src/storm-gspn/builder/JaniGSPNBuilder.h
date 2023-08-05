@@ -55,7 +55,6 @@ class JaniGSPNBuilder {
     storm::gspn::GSPN const& gspn;
     std::map<uint64_t, storm::jani::Variable const*> vars;
     std::shared_ptr<storm::expressions::ExpressionManager> expressionManager;
-    std::ofstream myfile;
 };
 }  // namespace builder
 }  // namespace storm

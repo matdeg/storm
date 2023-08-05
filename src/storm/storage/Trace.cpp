@@ -1,5 +1,4 @@
 #include <vector>
-#include "storm/storage/jani/Property.h"
 #include "storm/storage/jani/Model.h"
 #include "storm/storage/Trace.h"
 

@@ -16,12 +16,8 @@ namespace storm {
 namespace settings {
 namespace modules {
 
-
 const std::string IOSettings::moduleName = "io";
-const std::string IOSettings::notTracesOptionName = "not-traces";
 const std::string IOSettings::CtmcOptionName = "ctmc";
-const std::string IOSettings::unionTracesOptionName = "union-traces";
-const std::string IOSettings::limitTracesOptionName = "limit-traces";
 const std::string IOSettings::PslExprOptionName = "psl";
 const std::string IOSettings::tracesInputOptionName = "traces";
 const std::string IOSettings::mathisModeOptionName = "mathis";
@@ -81,9 +77,6 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
     this->addOption(storm::settings::OptionBuilder(moduleName, PslExprOptionName, false, "Psl expression to check for SLPN")
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("PslExpr", "Psl Expression").build())
                     .addArgument(storm::settings::ArgumentBuilder::createStringArgument("Formula", "Formula Expression").build())
-                    .build());
-    this->addOption(storm::settings::OptionBuilder(moduleName, limitTracesOptionName, false, "limit the number of traces managed by storm")
-                    .addArgument(storm::settings::ArgumentBuilder::createUnsignedIntegerArgument("limit", "limit of number of traces").build())
                     .build());
     this->addOption(storm::settings::OptionBuilder(
                         moduleName, exportDotMaxWidthOptionName, false,
@@ -244,16 +237,6 @@ IOSettings::IOSettings() : ModuleSettings(moduleName) {
                                        "Computes the steady state distribution. Result can be exported using --" + exportCheckResultOptionName + ".")
             .setIsAdvanced()
             .build());
-    this->addOption(
-        storm::settings::OptionBuilder(moduleName, unionTracesOptionName, false,
-                                       "Instead of computing the probability of each trace, computes the probability to get one of them")
-            .setIsAdvanced()
-            .build());
-    this->addOption(
-        storm::settings::OptionBuilder(moduleName, notTracesOptionName, false,
-                                       "Instead of computing the probability of each trace, computes the probability to get one of them")
-            .setIsAdvanced()
-            .build());
     this->addOption(storm::settings::OptionBuilder(moduleName, expectedVisitingTimesOptionName, false,
                                                    "Computes the expected number of times each state is visited (DTMC) or the expected time spend in each "
                                                    "state (CTMC). Result can be exported using --" +
@@ -324,29 +307,12 @@ std::string IOSettings::getPslFormula() const {
     return this->getOption(PslExprOptionName).getArgumentByName("Formula").getValueAsString();
 }
 
-
-bool IOSettings::isUnionTraces() const {
-    return this->getOption(unionTracesOptionName).getHasOptionBeenSet();
-}
-
-bool IOSettings::isNotTraces() const {
-    return this->getOption(notTracesOptionName).getHasOptionBeenSet();
-}
-
 bool IOSettings::hasTracesSet() const {
     return this->getOption(tracesInputOptionName).getHasOptionBeenSet();
 }
 
 std::string IOSettings::getTracesFilename() const {
     return this->getOption(tracesInputOptionName).getArgumentByName("filename").getValueAsString();
-}
-
-bool IOSettings::hasTracesLimit() const {
-    return this->getOption(limitTracesOptionName).getHasOptionBeenSet();
-}
-
-uint_fast64_t IOSettings::getTracesLimit() const {
-    return this->getOption(limitTracesOptionName).getArgumentByName("limit").getValueAsUnsignedInteger();
 }
 
 bool IOSettings::isExportBuildSet() const {

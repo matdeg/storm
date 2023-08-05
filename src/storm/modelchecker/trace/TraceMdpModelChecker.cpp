@@ -68,6 +68,8 @@ TraceMdpModelChecker<SparseMdpModelType>::TraceMdpModelChecker(SparseMdpModelTyp
 
 template<typename SparseMdpModelType>
 std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueType>>, std::shared_ptr<storm::logic::Formula>>  TraceMdpModelChecker<SparseMdpModelType>::checkPsl(Environment const& env, std::string stringPsl) {
+    
+    // building HOA automaton from the formula 
     spot::parsed_formula pf = spot::parse_infix_psl(stringPsl);
     spot::translator trans;
     trans.set_type(spot::postprocessor::Generic);
@@ -77,18 +79,21 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
     spot::print_hoa(autStream, aut, "is");
     storm::automata::DeterministicAutomaton::ptr da = storm::automata::DeterministicAutomaton::parse(autStream);
 
-    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);
+    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, true, 0);
     SparseMdpModelType const& model = this->getModel(); 
-    auto transitionMatrix = model.getTransitionMatrix();
+    auto transitionMatrix = model.getTransitionMatrix();    
     uint_fast64_t initialStateAutomaton = da->getInitialState();
-    std::deque<std::pair<StateType,uint_fast64_t>> statesToExploreTrace;
+    std::deque<std::pair<StateType,uint_fast64_t>> statesToExplore;
+
     for (auto a : model.getInitialStates()) {
         std::pair<StateType,uint_fast64_t> k (a,initialStateAutomaton);
-        statesToExploreTrace.emplace_back(k);
+        statesToExplore.emplace_back(k);
     }
 
+    // data can retrieve the used edges
     auto data = model.getChoiceOrigins();
     auto stateLabels = model.getStateLabeling();
+
     std::vector<uint_fast64_t> deadlocks;
     for (int k = 0; k < transitionMatrix.getRowGroupCount(); k++) {
         if (transitionMatrix.getRowGroupSize(k) == 1) {
@@ -100,6 +105,8 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
             }
         }
     }
+
+    // retrieve the action index of an edge
     std::vector<uint_fast64_t> edgeToAction = data->edgeIndexToActionIndex();
 
     // Now explore the current state until there is no more reachable state.
@@ -112,14 +119,14 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
     uint64_t numberOfExploredStates = 0;
     uint64_t numberOfExploredStatesSinceLastMessage = 0;
     
-    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,initialStateAutomaton),0}};
+    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> valueToIndex = {{std::make_pair(0,initialStateAutomaton),0}};
     // Perform a search through the model.
-    while (!statesToExploreTrace.empty()) {
+    while (!statesToExplore.empty()) {
         // Get the first state in the queue.
-        uint_fast64_t automatonIndex = statesToExploreTrace.front().second;
-        StateType currentIndex = statesToExploreTrace.front().first;
+        uint_fast64_t automatonIndex = statesToExplore.front().second;
+        StateType currentIndex = statesToExplore.front().first;
         currentRowGroup = currentIndex;
-        statesToExploreTrace.pop_front();
+        statesToExplore.pop_front();
 
         bool deadl = false;
         for (auto k : deadlocks) {
@@ -128,26 +135,31 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
             }
         }
 
-        transitionMatrixBuilderTrace.newRowGroup(currentRow);
+        transitionMatrixBuilder.newRowGroup(currentRow);
 
         if(!deadl) {
+            // compute the mass of enabled edges
             double totalMass = 0;
             for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
                 totalMass += data->getMass(i).evaluateAsDouble();
             }
+
+            // we don't add the value in the row, we could have an issue if we add the 5th one before the 1st one for example. So we first compute all the values and then add it in the matrix.
             std::map<uint_fast64_t,ValueType> indexToValue;
 
             for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
                 double Mass = data->getMass(i).evaluateAsDouble();
                 std::string actionName = data->getActionName(i);
-                uint_fast64_t actionIndex = edgeToAction[data->testFunction(i)[0]];
-                for (auto b : transitionMatrix.getRow(i)) {
-                    auto a = b.getColumnValuePair();
-                    auto nextStateIndex = a.first;
-                    auto proba = a.second;
-                    std::pair<StateType,uint_fast64_t> nextCouple;
+                uint_fast64_t actionIndex = edgeToAction[data->getEdgeIndexVect(i)[0]];
+                for (auto cell : transitionMatrix.getRow(i)) {
+                    auto value = cell.getColumnValuePair();
+                    auto nextStateIndex = value.first;
+                    auto proba = value.second;
+                    std::pair<StateType,uint_fast64_t> nextValue;
+                    
+                    // tau transition
                     if (actionIndex == 0) {
-                        nextCouple = std::make_pair(nextStateIndex,automatonIndex);
+                        nextValue = std::make_pair(nextStateIndex,automatonIndex);
                     } else {
                         auto& apSet = da->getAPSet();
                         uint_fast64_t labelIndex = 0;
@@ -156,13 +168,13 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
                             labelIndex = 1L << indexAP;
                         } 
                         uint_fast64_t nextAutomatonIndex = da->getSuccessor(automatonIndex,labelIndex);
-                        nextCouple = std::make_pair(nextStateIndex,nextAutomatonIndex);
+                        nextValue = std::make_pair(nextStateIndex,nextAutomatonIndex);
                     }
-                    if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
-                        statesToExploreTrace.emplace_back(nextCouple);
-                        coupleToIndex[nextCouple] = ++indexIncrement;
+                    if (valueToIndex.find(nextValue) == valueToIndex.end()) {
+                        statesToExplore.emplace_back(nextValue);
+                        valueToIndex[nextValue] = ++indexIncrement;
                     }
-                    uint_fast64_t index = coupleToIndex[nextCouple];
+                    uint_fast64_t index = valueToIndex[nextValue];
                     if (indexToValue.count(index) == 0) {
                         indexToValue[index] = proba* Mass / totalMass ;
                     } else {
@@ -170,25 +182,27 @@ std::pair<std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelTyp
                     }
                 }
             }
+            // we add the value in the matrix
             for (const auto& [key, value] : indexToValue) {
-                transitionMatrixBuilderTrace.addNextValue(currentRow, key,value);
+                transitionMatrixBuilder.addNextValue(currentRow, key,value);
             }
-
         } else {
-            transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
+            // in case of a deadlock, we add a loop
+            transitionMatrixBuilder.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
         }
         currentRow++;
     }
 
-    transitionMatrix = transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount());
-    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilderTrace.getCurrentRowGroupCount());
+    transitionMatrix = transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount());
+    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilder.getCurrentRowGroupCount());
     for (std::string s : stateLabels.getLabels()) {
         newStateLabels.addLabel(s);
     }
+    // we add a label for every acceptance set
     for (unsigned int i = 0; i < da->getAcceptance()->getNumberOfAcceptanceSets(); i++) {
         newStateLabels.addLabel(std::to_string(i));
     }
-    for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
+    for (auto it = valueToIndex.begin(); it != valueToIndex.end(); it++) {
         uint_fast64_t state = it->first.first;
         uint_fast64_t automatonState = it->first.second;
         auto labels = stateLabels.getLabelsOfState(state);
@@ -290,52 +304,17 @@ bool TraceMdpModelChecker<SparseMdpModelType>::isAccepting(cpphoafparser::HOACon
 }
 
 template<typename SparseMdpModelType>
-std::shared_ptr<storm::logic::Formula> TraceMdpModelChecker<SparseMdpModelType>::buildFormulaFromAcceptance(cpphoafparser::HOAConsumer::acceptance_expr& accExpr) {
-    switch (accExpr.getType()) {
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_AND:
-            return std::make_shared<storm::logic::BinaryBooleanPathFormula>(storm::logic::BinaryBooleanPathFormula(storm::logic::BinaryBooleanOperatorType::And,buildFormulaFromAcceptance(*accExpr.getLeft()),buildFormulaFromAcceptance(*accExpr.getRight())));
-            break;
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_OR:
-            return std::make_shared<storm::logic::BinaryBooleanPathFormula>(storm::logic::BinaryBooleanPathFormula(storm::logic::BinaryBooleanOperatorType::Or,buildFormulaFromAcceptance(*accExpr.getLeft()),buildFormulaFromAcceptance(*accExpr.getRight())));
-            break;
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_NOT:
-            return std::make_shared<storm::logic::UnaryBooleanPathFormula>(storm::logic::UnaryBooleanPathFormula(storm::logic::UnaryBooleanOperatorType::Not,buildFormulaFromAcceptance(*accExpr.getLeft())));
-            break;
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_TRUE:
-            return std::make_shared<storm::logic::BooleanLiteralFormula>(true);
-            break;
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_FALSE:
-            return std::make_shared<storm::logic::BooleanLiteralFormula>(false);
-            break;
-        case cpphoafparser::BooleanExpression<cpphoafparser::AtomAcceptance>::OperatorType::EXP_ATOM:
-            const cpphoafparser::AtomAcceptance& atom = accExpr.getAtom();
-            if (atom.getType() == cpphoafparser::AtomAcceptance::AtomType::TEMPORAL_FIN) {
-                auto formulaINFState = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula(std::to_string(atom.getAcceptanceSet())));
-                auto formulaFINFState = std::make_shared<storm::logic::EventuallyFormula>(storm::logic::EventuallyFormula(formulaINFState));
-                auto formulaFGINFState = std::make_shared<storm::logic::GloballyFormula>(storm::logic::GloballyFormula(formulaFINFState));
-                return std::make_shared<storm::logic::UnaryBooleanPathFormula>(storm::logic::UnaryBooleanPathFormula(storm::logic::UnaryBooleanOperatorType::Not,formulaFGINFState));
-            } else {
-                auto formulaINFState = std::make_shared<storm::logic::AtomicLabelFormula>(storm::logic::AtomicLabelFormula(std::to_string(atom.getAcceptanceSet())));
-                auto formulaFINFState = std::make_shared<storm::logic::EventuallyFormula>(storm::logic::EventuallyFormula(formulaINFState));
-                return std::make_shared<storm::logic::GloballyFormula>(storm::logic::GloballyFormula(formulaFINFState));
-            }
-            break;
-    }
-    STORM_LOG_THROW(false,storm::exceptions::NotSupportedException, "unexpected acceptance expression");
-}
-
-template<typename SparseMdpModelType>
 std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueType>> TraceMdpModelChecker<SparseMdpModelType>::buildProductAsDtmc(Environment const& env, std::vector<uint_fast64_t> const trace) {
 
 
-    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);
+    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, true, 0);
     SparseMdpModelType const& model = this->getModel(); 
     auto transitionMatrix = model.getTransitionMatrix();
         
-    std::deque<std::pair<StateType,uint_fast64_t>> statesToExploreTrace;
+    std::deque<std::pair<StateType,uint_fast64_t>> statesToExplore;
     for (auto a : model.getInitialStates()) {
         std::pair<StateType,uint_fast64_t> k (a,0);
-        statesToExploreTrace.emplace_back(k);
+        statesToExplore.emplace_back(k);
     }
 
     auto data = model.getChoiceOrigins();
@@ -365,14 +344,14 @@ std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueTy
 
     
     uint_fast64_t sinkIndex = transitionMatrix.getRowCount();
-    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,0),0}};
+    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> valueToIndex = {{std::make_pair(0,0),0}};
     // Perform a search through the model.
-    while (!statesToExploreTrace.empty()) {
+    while (!statesToExplore.empty()) {
         // Get the first state in the queue.
-        uint_fast64_t depth = statesToExploreTrace.front().second;
-        StateType currentIndex = statesToExploreTrace.front().first;
+        uint_fast64_t depth = statesToExplore.front().second;
+        StateType currentIndex = statesToExplore.front().first;
         currentRowGroup = currentIndex;
-        statesToExploreTrace.pop_front();
+        statesToExplore.pop_front();
 
         bool deadl = false;
         for (auto k : deadlocks) {
@@ -381,7 +360,7 @@ std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueTy
             }
         }
 
-        transitionMatrixBuilderTrace.newRowGroup(currentRow);
+        transitionMatrixBuilder.newRowGroup(currentRow);
 
         if(!deadl && !(currentIndex == sinkIndex)) {
             double totalMass = 0.0;
@@ -392,24 +371,24 @@ std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueTy
 
             for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
                 double Mass = data->getMass(i).evaluateAsDouble();
-                uint_fast64_t actionIndex = edgeToAction[data->testFunction(i)[0]];
-                for (auto b : transitionMatrix.getRow(i)) {
-                    auto a = b.getColumnValuePair();
-                    auto nextStateIndex = a.first;
-                    auto proba = a.second;
-                    std::pair<StateType,uint_fast64_t> nextCouple;
+                uint_fast64_t actionIndex = edgeToAction[data->getEdgeIndexVect(i)[0]];
+                for (auto cell : transitionMatrix.getRow(i)) {
+                    auto value = cell.getColumnValuePair();
+                    auto nextStateIndex = value.first;
+                    auto proba = value.second;
+                    std::pair<StateType,uint_fast64_t> nextValue;
                     if (actionIndex == 0) {
-                        nextCouple = std::make_pair(nextStateIndex,depth);
+                        nextValue = std::make_pair(nextStateIndex,depth);
                     } else if (actionIndex == trace[depth]) {
-                        nextCouple = std::make_pair(nextStateIndex,depth + 1);
+                        nextValue = std::make_pair(nextStateIndex,depth + 1);
                     } else {
-                        nextCouple = std::make_pair(sinkIndex,0);
+                        nextValue = std::make_pair(sinkIndex,0);
                     }
-                    if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
-                        statesToExploreTrace.emplace_back(nextCouple);
-                        coupleToIndex[nextCouple] = ++indexIncrement;
+                    if (valueToIndex.find(nextValue) == valueToIndex.end()) {
+                        statesToExplore.emplace_back(nextValue);
+                        valueToIndex[nextValue] = ++indexIncrement;
                     }
-                    uint_fast64_t index = coupleToIndex[nextCouple];
+                    uint_fast64_t index = valueToIndex[nextValue];
                     if (indexToValue.count(index) == 0) {
                         indexToValue[index] = proba* Mass / totalMass ;
                     } else {
@@ -418,18 +397,18 @@ std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueTy
                 }
             }
             for (const auto& [key, value] : indexToValue) {
-                transitionMatrixBuilderTrace.addNextValue(currentRow, key,value);
+                transitionMatrixBuilder.addNextValue(currentRow, key,value);
             }
 
         } else {
-            transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
+            transitionMatrixBuilder.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
         }
         currentRow++;
     }
-    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilderTrace.getCurrentRowGroupCount());
+    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilder.getCurrentRowGroupCount());
     newStateLabels.addLabel("init");
     newStateLabels.addLabel("final");
-    for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
+    for (auto it = valueToIndex.begin(); it != valueToIndex.end(); it++) {
         uint_fast64_t state = it->first.first;
         uint_fast64_t depth = it->first.second;
         if (state != sinkIndex) {
@@ -449,7 +428,7 @@ std::shared_ptr<storm::models::sparse::Dtmc<typename SparseMdpModelType::ValueTy
         }
     }
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
-        transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount()), newStateLabels,
+        transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount()), newStateLabels,
         std::unordered_map<std::string, RewardModelType>());
     modelComponents.transitionMatrix.makeRowGroupingTrivial();
     auto dtmc = std::make_shared<storm::models::sparse::Dtmc<ValueType, RewardModelType>>(std::move(modelComponents));
@@ -460,15 +439,15 @@ template<typename SparseMdpModelType>
 std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueType>> TraceMdpModelChecker<SparseMdpModelType>::buildProductAsCtmc(Environment const& env, std::vector<uint_fast64_t> const trace) {
 
 
-    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);
+    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, true, 0);
     SparseMdpModelType const& model = this->getModel(); 
     auto transitionMatrix = model.getTransitionMatrix();
     
 
-    std::deque<std::pair<StateType,uint_fast64_t>> statesToExploreTrace;
+    std::deque<std::pair<StateType,uint_fast64_t>> statesToExplore;
     for (auto a : model.getInitialStates()) {
         std::pair<StateType,uint_fast64_t> k (a,0);
-        statesToExploreTrace.emplace_back(k);
+        statesToExplore.emplace_back(k);
     }
 
     auto data = model.getChoiceOrigins();
@@ -498,14 +477,14 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
 
     
     uint_fast64_t sinkIndex = transitionMatrix.getRowCount();
-    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> coupleToIndex = {{std::make_pair(0,0),0}};
+    std::map<std::pair<StateType,uint_fast64_t>, uint_fast64_t> valueToIndex = {{std::make_pair(0,0),0}};
     // Perform a search through the model.
-    while (!statesToExploreTrace.empty()) {
+    while (!statesToExplore.empty()) {
         // Get the first state in the queue.
-        uint_fast64_t depth = statesToExploreTrace.front().second;
-        StateType currentIndex = statesToExploreTrace.front().first;
+        uint_fast64_t depth = statesToExplore.front().second;
+        StateType currentIndex = statesToExplore.front().first;
         currentRowGroup = currentIndex;
-        statesToExploreTrace.pop_front();
+        statesToExplore.pop_front();
 
         bool deadl = false;
         for (auto k : deadlocks) {
@@ -514,31 +493,31 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
             }
         }
 
-        transitionMatrixBuilderTrace.newRowGroup(currentRow);
+        transitionMatrixBuilder.newRowGroup(currentRow);
 
         if(!deadl && !(currentIndex == sinkIndex)) {
             std::map<uint_fast64_t,ValueType> indexToValue;
 
             for (int i = transitionMatrix.getRowGroupIndices()[currentRowGroup]; i < transitionMatrix.getRowGroupIndices()[currentRowGroup + 1]; i++) {
                 double Mass = data->getMass(i).evaluateAsDouble();
-                uint_fast64_t actionIndex = edgeToAction[data->testFunction(i)[0]];
-                for (auto b : transitionMatrix.getRow(i)) {
-                    auto a = b.getColumnValuePair();
-                    auto nextStateIndex = a.first;
-                    auto proba = a.second;
-                    std::pair<StateType,uint_fast64_t> nextCouple;
+                uint_fast64_t actionIndex = edgeToAction[data->getEdgeIndexVect(i)[0]];
+                for (auto cell : transitionMatrix.getRow(i)) {
+                    auto value = cell.getColumnValuePair();
+                    auto nextStateIndex = value.first;
+                    auto proba = value.second;
+                    std::pair<StateType,uint_fast64_t> nextValue;
                     if (actionIndex == 0) {
-                        nextCouple = std::make_pair(nextStateIndex,depth);
+                        nextValue = std::make_pair(nextStateIndex,depth);
                     } else if (actionIndex == trace[depth]) {
-                        nextCouple = std::make_pair(nextStateIndex,depth + 1);
+                        nextValue = std::make_pair(nextStateIndex,depth + 1);
                     } else {
-                        nextCouple = std::make_pair(sinkIndex,0);
+                        nextValue = std::make_pair(sinkIndex,0);
                     }
-                    if (coupleToIndex.find(nextCouple) == coupleToIndex.end()) {
-                        statesToExploreTrace.emplace_back(nextCouple);
-                        coupleToIndex[nextCouple] = ++indexIncrement;
+                    if (valueToIndex.find(nextValue) == valueToIndex.end()) {
+                        statesToExplore.emplace_back(nextValue);
+                        valueToIndex[nextValue] = ++indexIncrement;
                     }
-                    uint_fast64_t index = coupleToIndex[nextCouple];
+                    uint_fast64_t index = valueToIndex[nextValue];
                     if (indexToValue.count(index) == 0) {
                         indexToValue[index] = proba* Mass;
                     } else {
@@ -547,18 +526,18 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
                 }
             }
             for (const auto& [key, value] : indexToValue) {
-                transitionMatrixBuilderTrace.addNextValue(currentRow, key,value);
+                transitionMatrixBuilder.addNextValue(currentRow, key,value);
             }
 
         } else {
-            transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
+            transitionMatrixBuilder.addNextValue(currentRow, currentRow,storm::utility::one<ValueType>());
         }
         currentRow++;
     }
-    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilderTrace.getCurrentRowGroupCount());
+    storm::models::sparse::StateLabeling newStateLabels(transitionMatrixBuilder.getCurrentRowGroupCount());
     newStateLabels.addLabel("init");
     newStateLabels.addLabel("final");
-    for (auto it = coupleToIndex.begin(); it != coupleToIndex.end(); it++) {
+    for (auto it = valueToIndex.begin(); it != valueToIndex.end(); it++) {
         uint_fast64_t state = it->first.first;
         uint_fast64_t depth = it->first.second;
         if (state != sinkIndex) {
@@ -578,7 +557,7 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
         }
     }
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
-        transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount()), newStateLabels,
+        transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount()), newStateLabels,
         std::unordered_map<std::string, RewardModelType>(),true);
     modelComponents.transitionMatrix.makeRowGroupingTrivial();
     auto ctmc = std::make_shared<storm::models::sparse::Ctmc<ValueType, RewardModelType>>(std::move(modelComponents));
@@ -589,7 +568,7 @@ template<typename SparseMdpModelType>
 std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueType>> TraceMdpModelChecker<SparseMdpModelType>::buildAsCtmc(Environment const& env) {
 
 
-    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilderTrace(0, 0, 0, false, true, 0);
+    storm::storage::SparseMatrixBuilder<ValueType> transitionMatrixBuilder(0, 0, 0, false, true, 0);
     SparseMdpModelType const& model = this->getModel(); 
     auto transitionMatrix = model.getTransitionMatrix();
 
@@ -614,7 +593,7 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
     uint_fast64_t indexIncrement = 0;
 
     for (uint_fast64_t k = 0; k < transitionMatrix.getRowGroupCount(); k++) {
-        transitionMatrixBuilderTrace.newRowGroup(currentRow);
+        transitionMatrixBuilder.newRowGroup(currentRow);
         bool deadl = false;
         for (auto i : deadlocks) {
             if (k == i) {
@@ -625,28 +604,28 @@ std::shared_ptr<storm::models::sparse::Ctmc<typename SparseMdpModelType::ValueTy
             std::map<uint_fast64_t,ValueType> indexToValue;
             for (int i = transitionMatrix.getRowGroupIndices()[k]; i < transitionMatrix.getRowGroupIndices()[k + 1]; i++) {
                 double Mass = data->getMass(i).evaluateAsDouble();
-                for (auto b : transitionMatrix.getRow(i)) {
-                    auto a = b.getColumnValuePair();
-                    auto index = a.first;
+                for (auto cell : transitionMatrix.getRow(i)) {
+                    auto value = cell.getColumnValuePair();
+                    auto index = value.first;
                     if (indexToValue.count(index) == 0) {
-                        indexToValue[index] = a.second * Mass;
+                        indexToValue[index] = value.second * Mass;
                     } else {
-                        indexToValue[index] = indexToValue[index] + a.second * Mass;
+                        indexToValue[index] = indexToValue[index] + value.second * Mass;
                     }
                 }
             }
             for (const auto& [key, value] : indexToValue) {
-                transitionMatrixBuilderTrace.addNextValue(currentRow, key,value);
+                transitionMatrixBuilder.addNextValue(currentRow, key,value);
             }
         } else {
-            transitionMatrixBuilderTrace.addNextValue(currentRow, currentRow, storm::utility::one<ValueType>());
+            transitionMatrixBuilder.addNextValue(currentRow, currentRow, storm::utility::one<ValueType>());
         }
         currentRow++;
     }
 
     auto stateLabels = model.getStateLabeling();
     storm::storage::sparse::ModelComponents<ValueType, RewardModelType> modelComponents(
-        transitionMatrixBuilderTrace.build(0, transitionMatrixBuilderTrace.getCurrentRowGroupCount()), stateLabels,
+        transitionMatrixBuilder.build(0, transitionMatrixBuilder.getCurrentRowGroupCount()), stateLabels,
         std::unordered_map<std::string, RewardModelType>(),true);
 
     modelComponents.transitionMatrix.makeRowGroupingTrivial();

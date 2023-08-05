@@ -69,7 +69,6 @@ struct SymbolicInput {
 
     // The preprocessed properties to check (in case they needed amendment).
     boost::optional<std::vector<storm::jani::Property>> preprocessedProperties;
-
 };
 
 void parseSymbolicModelDescription(storm::settings::modules::IOSettings const& ioSettings, SymbolicInput& input) {
@@ -155,8 +154,6 @@ SymbolicInput parseSymbolicInput() {
         return input;
     }
 }
-
-
 
 struct ModelProcessingInformation {
     // The engine to use
@@ -1162,7 +1159,7 @@ void verifyWithSparseEngine(std::shared_ptr<storm::models::ModelBase> const& mod
             task.setProduceSchedulers(true);
         }
         std::unique_ptr<storm::modelchecker::CheckResult> result = storm::api::verifyWithSparseEngine<ValueType>(mpi.env, sparseModel, task);
-        
+
         std::unique_ptr<storm::modelchecker::CheckResult> filter;
         if (filterForInitialStates) {
             filter = std::make_unique<storm::modelchecker::ExplicitQualitativeCheckResult>(sparseModel->getInitialStates());

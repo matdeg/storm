@@ -117,7 +117,7 @@ storm::models::sparse::ChoiceLabeling ChoiceOrigins::toChoiceLabeling() const {
     return result;
 }
 
-std::vector<uint_fast64_t> const ChoiceOrigins::testFunction(uint_fast64_t k) const {
+std::vector<uint_fast64_t> const ChoiceOrigins::getEdgeIndexVect(uint_fast64_t k) const {
     STORM_LOG_THROW(false, storm::exceptions::InvalidArgumentException,
                     "should not have called test function in ChoiceOrigins");
 }

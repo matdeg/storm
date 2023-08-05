@@ -37,6 +37,7 @@ class IOSettings : public ModuleSettings {
     std::string getExportDotFilename() const;
 
     bool isMathisMode() const;
+
     bool isCtmc() const;
 
     bool hasPslExpression() const;
@@ -58,13 +59,6 @@ class IOSettings : public ModuleSettings {
     std::string getTracesFilename() const;
 
     bool hasTracesSet() const;
-
-    /**
-     *
-     */
-    uint_fast64_t getTracesLimit() const;
-
-    bool hasTracesLimit() const;
 
     /*!
      * Retrieves whether the exportbuild option was set.
@@ -314,18 +308,6 @@ class IOSettings : public ModuleSettings {
     std::string getConstantDefinitionString() const;
 
     /*!
-     * *
-     * *
-     */
-    bool isUnionTraces() const;
-
-    /*!
-     * *
-     * *
-     */
-    bool isNotTraces() const;
-
-    /*!
      * Retrieves whether the jani-property option was set
      * @return
      */
@@ -411,14 +393,11 @@ class IOSettings : public ModuleSettings {
 
    private:
     // Define the string names of the options as constants.
-    static const std::string unionTracesOptionName;
     static const std::string mathisModeOptionName;
     static const std::string CtmcOptionName;
     static const std::string PslExprOptionName;
-    static const std::string notTracesOptionName;
     static const std::string exportDotOptionName;
     static const std::string tracesInputOptionName;
-    static const std::string limitTracesOptionName;
     static const std::string exportDotMaxWidthOptionName;
     static const std::string exportBuildOptionName;
     static const std::string exportJaniDotOptionName;

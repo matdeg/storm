@@ -6,9 +6,6 @@
 
 #include "storm/models/sparse/StateLabeling.h"
 
-#include "storm/settings/SettingsManager.h"
-#include "storm/settings/modules/IOSettings.h"
-
 #include "storm/solver/SmtSolver.h"
 #include "storm/storage/expressions/SimpleValuation.h"
 

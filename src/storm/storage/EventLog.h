@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <algorithm>
-#include "storm/storage/jani/Property.h"
 #include "storm/storage/jani/Model.h"
 #include "storm/storage/Trace.h"
 #include "storm/storage/expressions/ExpressionManager.h"
@@ -14,21 +13,38 @@ namespace storage {
 template<typename ValueType>
 class EventLog {
    public:
-    void addTrace(std::vector<uint_fast64_t> trace, bool isValid);
-    void updateTracesLength();
-    std::vector<std::vector<uint_fast64_t>> getTraces() const;
-    uint_fast64_t size() const;
-    uint_fast64_t totalSize() const;
-    uint_fast64_t getId(std::vector<uint_fast64_t> trace) ;
-    void addProbability(ValueType p, int id);
-    uint_fast64_t getTraceCount(std::vector<uint_fast64_t> trace) ; 
-    bool isValid(uint_fast64_t id) const;
-    void printInformation() ;
-    void printDetailledInformation() ;
-    ValueType score() ;
-    uint_fast64_t numberOfZeroTraces() ;
-    uint_fast64_t numberOfValidTraces() ;
 
+    void addTrace(std::vector<uint_fast64_t> trace, bool isValid);
+    
+    // update the value of meanLength
+    void updateTracesLength();
+    
+    std::vector<std::vector<uint_fast64_t>> getTraces() const;
+    
+    // number of distinct traces
+    uint_fast64_t size() const;
+    
+    // number of traces
+    uint_fast64_t totalSize() const;
+    
+    uint_fast64_t getId(std::vector<uint_fast64_t> trace) ;
+    
+    void addProbability(ValueType p, int id);
+    
+    // retrieve the number of occurences of a trace
+    uint_fast64_t getTraceCount(std::vector<uint_fast64_t> trace) ; 
+    
+    bool isValid(uint_fast64_t id) const;
+    
+    void printInformation() ;
+    
+    void printDetailledInformation() ;
+    
+    ValueType score() ;
+    
+    uint_fast64_t numberOfZeroTraces() ;
+    
+    uint_fast64_t numberOfValidTraces() ;
 
    private:
     std::map<std::vector<uint_fast64_t>,int> tracesCount; 

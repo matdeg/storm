@@ -30,14 +30,6 @@ void EventLog<ValueType>::addTrace(std::vector<uint_fast64_t> trace, bool isVali
 
 template<typename ValueType>
 void EventLog<ValueType>::updateTracesLength() {
-    tracesLength = std::vector<uint_fast64_t>(maxLength + 1,0);
-    cumulativeTracesLength = std::vector<uint_fast64_t>(maxLength + 1,0);
-    for (auto x : this->tracesCount) {
-        tracesLength[x.first.size()] += x.second;
-    }
-    for (int k = 1; k < maxLength + 1; k++) {
-        cumulativeTracesLength[k] = tracesLength[k] + cumulativeTracesLength[k-1];
-    }
     double sumLengths = 0;
     for (int k = 1; k < maxLength + 1; k++) {
         sumLengths += k * tracesLength[k];

@@ -55,7 +55,7 @@ class PrismChoiceOrigins : public ChoiceOrigins {
 
     std::size_t hash() const override;
 
-    virtual std::vector<uint_fast64_t> const testFunction(uint_fast64_t k) const override;
+    virtual std::vector<uint_fast64_t> const getEdgeIndexVect(uint_fast64_t k) const override;
 
     virtual FlatSet<uint_fast64_t> const& getEdgeIndexSet(uint_fast64_t choiceIndex) const override;
 
